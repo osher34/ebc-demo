@@ -1,67 +1,58 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>EBC Tremor + Dynamic Challenge</title>
+<title>EBC Human Presence Engine</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body{
 margin:0;
 font-family:Arial;
 text-align:center;
-background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-color:white;
-padding-top:20px;
+background:radial-gradient(circle at top,#0f2027,#000);
+color:#00f7ff;
 }
 button{
 padding:12px 25px;
 font-size:16px;
-border-radius:8px;
+border-radius:6px;
 border:none;
-background:#00c6ff;
+background:#00f7ff;
+color:black;
 cursor:pointer;
 margin:10px;
+}
+canvas{
+background:#111;
+margin-top:15px;
+touch-action:none;
+border:1px solid #00f7ff;
 }
 #result{
 font-size:22px;
 margin-top:15px;
 font-weight:bold;
 }
-canvas{
-background:#111;
-margin-top:15px;
-touch-action:none;
-}
-#xyz{
-margin-top:10px;
-font-size:14px;
-}
 </style>
 </head>
 <body>
 
-<h2>EBC Live Demo</h2>
+<h2>EBC – Human Presence Verification</h2>
+<button onclick="startTest()">Run Verification</button>
 
-<button onclick="startTest()">Run Tremor Test</button>
-
-<div id="xyz">X:0 | Y:0 | Z:0</div>
 <div id="result"></div>
-
-<canvas id="freqGraph" width="320" height="120"></canvas>
-
-<h3>Dynamic Challenge – Draw the Line</h3>
 <canvas id="drawArea" width="320" height="200"></canvas>
 
 <script>
 let rawData=[];
 let collecting=false;
 let sampleRate=0;
-
-// -------- Tremor Part --------
+let tremorScore=0;
 
 function startTest(){
 rawData=[];
 collecting=true;
-document.getElementById("result").innerText="Collecting...";
+tremorScore=0;
+document.getElementById("result").innerText="Collecting Tremor...";
 setTimeout(()=>{
 collecting=false;
 processSignal();
@@ -69,17 +60,11 @@ processSignal();
 }
 
 window.addEventListener("devicemotion",function(e){
+if(!collecting) return;
 if(!e.acceleration) return;
-
 let x=e.acceleration.x||0;
 let y=e.acceleration.y||0;
 let z=e.acceleration.z||0;
-
-document.getElementById("xyz").innerText=
-"X:"+x.toFixed(2)+" | Y:"+y.toFixed(2)+" | Z:"+z.toFixed(2);
-
-if(!collecting) return;
-
 let mag=Math.sqrt(x*x+y*y+z*z);
 rawData.push(mag);
 });
@@ -93,13 +78,14 @@ return;
 
 sampleRate=rawData.length/5;
 
+let mean=rawData.reduce((a,b)=>a+b,0)/rawData.length;
+let variance=rawData.reduce((a,b)=>a+(b-mean)*(b-mean),0)/rawData.length;
+let std=Math.sqrt(variance);
+
 let diff=[];
 for(let i=1;i<rawData.length;i++){
 diff.push(rawData[i]-rawData[i-1]);
 }
-
-let mean=diff.reduce((a,b)=>a+b,0)/diff.length;
-diff=diff.map(v=>v-mean);
 
 let fftResult=fft(diff);
 let freqResolution=sampleRate/diff.length;
@@ -115,28 +101,15 @@ bandEnergy+=fftResult[i];
 }
 }
 
-drawGraph(fftResult,freqResolution);
-
-// 🔒 סינון שולחן
-if(totalEnergy < 0.05 || bandEnergy < 0.001){
-showResult(0);
-return;
-}
-
-let ratio=bandEnergy/totalEnergy;
-let score=Math.min(100,ratio*500);
-
-showResult(score);
-}
-
-function showResult(score){
-if(score>15){
-document.getElementById("result").style.color="#00ff99";
-document.getElementById("result").innerText="Biological Activity: "+score.toFixed(0)+"%";
+// 🔒 Gate condition
+if(totalEnergy < 0.1 || std < 0.01){
+tremorScore=0;
 }else{
-document.getElementById("result").style.color="#ff4d4d";
-document.getElementById("result").innerText="Low Biological Signal: "+score.toFixed(0)+"%";
+let ratio=bandEnergy/(totalEnergy+0.00001);
+tremorScore=Math.min(100,ratio*600);
 }
+
+startChallenge();
 }
 
 function fft(signal){
@@ -154,66 +127,84 @@ result[k]=Math.sqrt(real*real+imag*imag)/N;
 return result;
 }
 
-function drawGraph(data,res){
-let canvas=document.getElementById("freqGraph");
+// ---------- Dynamic Challenge ----------
+
+let canvas=document.getElementById("drawArea");
 let ctx=canvas.getContext("2d");
-ctx.clearRect(0,0,320,120);
-ctx.strokeStyle="#00c6ff";
+let points=[];
+let currentChallenge=0;
+
+function startChallenge(){
+points=[];
+ctx.clearRect(0,0,320,200);
+currentChallenge=Math.floor(Math.random()*4);
+ctx.strokeStyle="#00f7ff";
+ctx.lineWidth=3;
 ctx.beginPath();
-for(let i=0;i<data.length;i++){
-let freq=i*res;
-if(freq>20) break;
-let x=i*5;
-let y=120-data[i]*200;
-if(i===0) ctx.moveTo(x,y);
-else ctx.lineTo(x,y);
+
+if(currentChallenge===0){ // horizontal
+ctx.moveTo(20,100);
+ctx.lineTo(300,100);
 }
+if(currentChallenge===1){ // vertical
+ctx.moveTo(160,20);
+ctx.lineTo(160,180);
+}
+if(currentChallenge===2){ // zigzag
+ctx.moveTo(20,150);
+ctx.lineTo(80,50);
+ctx.lineTo(140,150);
+ctx.lineTo(200,50);
+ctx.lineTo(260,150);
+}
+if(currentChallenge===3){ // triangle
+ctx.moveTo(80,150);
+ctx.lineTo(160,50);
+ctx.lineTo(240,150);
+ctx.lineTo(80,150);
+}
+
 ctx.stroke();
 }
 
-// -------- Dynamic Line Challenge --------
-
-let drawCanvas=document.getElementById("drawArea");
-let dctx=drawCanvas.getContext("2d");
-
-function drawGuide(){
-dctx.clearRect(0,0,320,200);
-dctx.strokeStyle="yellow";
-dctx.lineWidth=4;
-dctx.beginPath();
-dctx.moveTo(20,100);
-dctx.lineTo(300,100);
-dctx.stroke();
-}
-
-drawGuide();
-
-let points=[];
-drawCanvas.addEventListener("touchmove",function(e){
+canvas.addEventListener("touchmove",function(e){
 e.preventDefault();
-let rect=drawCanvas.getBoundingClientRect();
+let rect=canvas.getBoundingClientRect();
 let x=e.touches[0].clientX-rect.left;
 let y=e.touches[0].clientY-rect.top;
-
 points.push({x,y});
-
-dctx.fillStyle="cyan";
-dctx.fillRect(x,y,3,3);
+ctx.fillStyle="white";
+ctx.fillRect(x,y,3,3);
 });
 
-drawCanvas.addEventListener("touchend",function(){
-evaluateLine();
+canvas.addEventListener("touchend",function(){
+evaluateChallenge();
 });
 
-function evaluateLine(){
+function evaluateChallenge(){
+
 let valid=0;
+
 for(let p of points){
-if(Math.abs(p.y-100)<20) valid++;
+if(currentChallenge===0 && Math.abs(p.y-100)<20) valid++;
+if(currentChallenge===1 && Math.abs(p.x-160)<20) valid++;
+if(currentChallenge===2 && p.y<160 && p.y>40) valid++;
+if(currentChallenge===3 && p.y<160 && p.y>40) valid++;
 }
+
 let accuracy=(valid/points.length)*100;
-alert("Line Accuracy: "+accuracy.toFixed(0)+"%");
+
+let finalScore=(tremorScore*0.6)+(accuracy*0.4);
+
+if(finalScore>50){
+document.getElementById("result").innerText=
+"Human Verified\nTremor: "+tremorScore.toFixed(0)+"% | Challenge: "+accuracy.toFixed(0)+"%";
+}else{
+document.getElementById("result").innerText=
+"Verification Failed\nTremor: "+tremorScore.toFixed(0)+"% | Challenge: "+accuracy.toFixed(0)+"%";
+}
+
 points=[];
-drawGuide();
 }
 </script>
 
