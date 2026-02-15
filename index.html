@@ -1,43 +1,52 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>EBC Advanced Tremor Engine</title>
+<title>EBC Professional Tremor Engine</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-body {
-    margin:0;
-    font-family:Arial;
-    text-align:center;
-    background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-    color:white;
-    padding-top:40px;
+body{
+margin:0;
+font-family:Arial;
+text-align:center;
+background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+color:white;
+padding-top:30px;
 }
-button {
-    padding:15px 30px;
-    font-size:18px;
-    border-radius:8px;
-    border:none;
-    background:#00c6ff;
-    cursor:pointer;
+button{
+padding:15px 30px;
+font-size:18px;
+border-radius:8px;
+border:none;
+background:#00c6ff;
+cursor:pointer;
 }
-#result {
-    font-size:28px;
-    margin-top:25px;
-    font-weight:bold;
+#result{
+font-size:26px;
+margin-top:20px;
+font-weight:bold;
 }
-canvas {
-    margin-top:20px;
-    background:#111;
+canvas{
+background:#111;
+margin-top:20px;
+}
+#xyz{
+margin-top:15px;
+font-size:16px;
 }
 </style>
 </head>
 <body>
 
-<h2>EBC Advanced 8–12Hz Detection</h2>
+<h2>EBC Signal Analysis</h2>
 <p>Hold phone steady for 5 seconds</p>
 <button onclick="startTest()">Start Test</button>
+
+<div id="xyz">
+X: 0 | Y: 0 | Z: 0
+</div>
+
 <div id="result"></div>
-<canvas id="graph" width="320" height="160"></canvas>
+<canvas id="freqGraph" width="320" height="160"></canvas>
 
 <script>
 let rawData=[];
@@ -45,125 +54,138 @@ let collecting=false;
 let sampleRate=0;
 
 function startTest(){
-    rawData=[];
-    collecting=true;
-    document.getElementById("result").innerText="Collecting...";
-    requestPermission();
-    setTimeout(()=>{
-        collecting=false;
-        processSignal();
-    },5000);
+rawData=[];
+collecting=true;
+document.getElementById("result").innerText="Collecting...";
+requestPermission();
+setTimeout(()=>{
+collecting=false;
+processSignal();
+},5000);
 }
 
 function requestPermission(){
-    if(typeof DeviceMotionEvent.requestPermission==='function'){
-        DeviceMotionEvent.requestPermission().then(p=>{
-            if(p==='granted'){
-                window.addEventListener('devicemotion',handleMotion);
-            }
-        });
-    } else {
-        window.addEventListener('devicemotion',handleMotion);
-    }
+if(typeof DeviceMotionEvent.requestPermission==='function'){
+DeviceMotionEvent.requestPermission().then(p=>{
+if(p==='granted'){
+window.addEventListener('devicemotion',handleMotion);
+}
+});
+}else{
+window.addEventListener('devicemotion',handleMotion);
+}
 }
 
 function handleMotion(e){
-    if(!collecting) return;
-    if(!e.acceleration) return;
+if(!e.acceleration) return;
 
-    let x=e.acceleration.x||0;
-    let y=e.acceleration.y||0;
-    let z=e.acceleration.z||0;
+let x=e.acceleration.x||0;
+let y=e.acceleration.y||0;
+let z=e.acceleration.z||0;
 
-    let mag=Math.sqrt(x*x+y*y+z*z);
-    rawData.push(mag);
+document.getElementById("xyz").innerText=
+"X: "+x.toFixed(3)+" | Y: "+y.toFixed(3)+" | Z: "+z.toFixed(3);
+
+if(!collecting) return;
+
+let mag=Math.sqrt(x*x+y*y+z*z);
+rawData.push(mag);
 }
 
 function processSignal(){
-    if(rawData.length<20){
-        document.getElementById("result").innerText="Not enough data";
-        return;
-    }
 
-    sampleRate=rawData.length/5;
+if(rawData.length<30){
+document.getElementById("result").innerText="Not enough data";
+return;
+}
 
-    // 1️⃣ Derivative
-    let diff=[];
-    for(let i=1;i<rawData.length;i++){
-        diff.push(rawData[i]-rawData[i-1]);
-    }
+sampleRate=rawData.length/5;
 
-    // 2️⃣ Remove mean (high-pass basic)
-    let mean=diff.reduce((a,b)=>a+b,0)/diff.length;
-    diff=diff.map(v=>v-mean);
+let diff=[];
+for(let i=1;i<rawData.length;i++){
+diff.push(rawData[i]-rawData[i-1]);
+}
 
-    // 3️⃣ Apply Hamming Window
-    for(let i=0;i<diff.length;i++){
-        let w=0.54-0.46*Math.cos((2*Math.PI*i)/(diff.length-1));
-        diff[i]*=w;
-    }
+let mean=diff.reduce((a,b)=>a+b,0)/diff.length;
+diff=diff.map(v=>v-mean);
 
-    // 4️⃣ FFT
-    let fftResult=fft(diff);
-    let freqResolution=sampleRate/diff.length;
+for(let i=0;i<diff.length;i++){
+let w=0.54-0.46*Math.cos((2*Math.PI*i)/(diff.length-1));
+diff[i]*=w;
+}
 
-    let bandEnergy=0;
-    for(let i=0;i<fftResult.length;i++){
-        let freq=i*freqResolution;
-        if(freq>=8 && freq<=12){
-            bandEnergy+=fftResult[i];
-        }
-    }
+let fftResult=fft(diff);
+let freqResolution=sampleRate/diff.length;
 
-    // 5️⃣ Smart normalization
-    let totalEnergy=fftResult.reduce((a,b)=>a+b,0);
-    let ratio=bandEnergy/(totalEnergy+0.0001);
+let bandEnergy=0;
+let totalEnergy=0;
 
-    let score=Math.min(100,ratio*800);
+for(let i=0;i<fftResult.length;i++){
+let freq=i*freqResolution;
+totalEnergy+=fftResult[i];
 
-    drawGraph(fftResult,freqResolution);
+if(freq>=8 && freq<=12){
+bandEnergy+=fftResult[i];
+}
+}
 
-    if(score>10){
-        document.getElementById("result").style.color="#00ff99";
-        document.getElementById("result").innerText="Biological Activity Detected\nScore: "+score.toFixed(0)+"%";
-    } else {
-        document.getElementById("result").style.color="#ff4d4d";
-        document.getElementById("result").innerText="Low Biological Signal\nScore: "+score.toFixed(0)+"%";
-    }
+drawGraph(fftResult,freqResolution);
+
+// 🔒 יציבות חישוב
+if(totalEnergy < 0.01){
+showResult(0);
+return;
+}
+
+let ratio=bandEnergy/totalEnergy;
+let score=Math.min(100,ratio*500);
+
+showResult(score);
+}
+
+function showResult(score){
+if(score>10){
+document.getElementById("result").style.color="#00ff99";
+document.getElementById("result").innerText=
+"Biological Activity Detected\nScore: "+score.toFixed(0)+"%";
+}else{
+document.getElementById("result").style.color="#ff4d4d";
+document.getElementById("result").innerText=
+"Low Biological Signal\nScore: "+score.toFixed(0)+"%";
+}
 }
 
 function fft(signal){
-    let N=signal.length;
-    let result=[];
-    for(let k=0;k<N/2;k++){
-        let real=0,imag=0;
-        for(let n=0;n<N;n++){
-            let angle=2*Math.PI*k*n/N;
-            real+=signal[n]*Math.cos(angle);
-            imag-=signal[n]*Math.sin(angle);
-        }
-        result[k]=Math.sqrt(real*real+imag*imag)/N;
-    }
-    return result;
+let N=signal.length;
+let result=[];
+for(let k=0;k<N/2;k++){
+let real=0,imag=0;
+for(let n=0;n<N;n++){
+let angle=2*Math.PI*k*n/N;
+real+=signal[n]*Math.cos(angle);
+imag-=signal[n]*Math.sin(angle);
+}
+result[k]=Math.sqrt(real*real+imag*imag)/N;
+}
+return result;
 }
 
 function drawGraph(data,res){
-    let canvas=document.getElementById("graph");
-    let ctx=canvas.getContext("2d");
-    ctx.clearRect(0,0,320,160);
-    ctx.strokeStyle="#00c6ff";
-    ctx.beginPath();
+let canvas=document.getElementById("freqGraph");
+let ctx=canvas.getContext("2d");
+ctx.clearRect(0,0,320,160);
+ctx.strokeStyle="#00c6ff";
+ctx.beginPath();
 
-    for(let i=0;i<data.length;i++){
-        let freq=i*res;
-        if(freq>20) break;
-
-        let x=i*5;
-        let y=160-data[i]*200;
-        if(i===0) ctx.moveTo(x,y);
-        else ctx.lineTo(x,y);
-    }
-    ctx.stroke();
+for(let i=0;i<data.length;i++){
+let freq=i*res;
+if(freq>20) break;
+let x=i*5;
+let y=160-data[i]*300;
+if(i===0) ctx.moveTo(x,y);
+else ctx.lineTo(x,y);
+}
+ctx.stroke();
 }
 </script>
 
