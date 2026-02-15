@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>EBC Professional Tremor Engine</title>
+<title>EBC Tremor + Dynamic Challenge</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body{
@@ -10,73 +10,65 @@ font-family:Arial;
 text-align:center;
 background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
 color:white;
-padding-top:30px;
+padding-top:20px;
 }
 button{
-padding:15px 30px;
-font-size:18px;
+padding:12px 25px;
+font-size:16px;
 border-radius:8px;
 border:none;
 background:#00c6ff;
 cursor:pointer;
+margin:10px;
 }
 #result{
-font-size:26px;
-margin-top:20px;
+font-size:22px;
+margin-top:15px;
 font-weight:bold;
 }
 canvas{
 background:#111;
-margin-top:20px;
+margin-top:15px;
+touch-action:none;
 }
 #xyz{
-margin-top:15px;
-font-size:16px;
+margin-top:10px;
+font-size:14px;
 }
 </style>
 </head>
 <body>
 
-<h2>EBC Signal Analysis</h2>
-<p>Hold phone steady for 5 seconds</p>
-<button onclick="startTest()">Start Test</button>
+<h2>EBC Live Demo</h2>
 
-<div id="xyz">
-X: 0 | Y: 0 | Z: 0
-</div>
+<button onclick="startTest()">Run Tremor Test</button>
 
+<div id="xyz">X:0 | Y:0 | Z:0</div>
 <div id="result"></div>
-<canvas id="freqGraph" width="320" height="160"></canvas>
+
+<canvas id="freqGraph" width="320" height="120"></canvas>
+
+<h3>Dynamic Challenge – Draw the Line</h3>
+<canvas id="drawArea" width="320" height="200"></canvas>
 
 <script>
 let rawData=[];
 let collecting=false;
 let sampleRate=0;
 
+// -------- Tremor Part --------
+
 function startTest(){
 rawData=[];
 collecting=true;
 document.getElementById("result").innerText="Collecting...";
-requestPermission();
 setTimeout(()=>{
 collecting=false;
 processSignal();
 },5000);
 }
 
-function requestPermission(){
-if(typeof DeviceMotionEvent.requestPermission==='function'){
-DeviceMotionEvent.requestPermission().then(p=>{
-if(p==='granted'){
-window.addEventListener('devicemotion',handleMotion);
-}
-});
-}else{
-window.addEventListener('devicemotion',handleMotion);
-}
-}
-
-function handleMotion(e){
+window.addEventListener("devicemotion",function(e){
 if(!e.acceleration) return;
 
 let x=e.acceleration.x||0;
@@ -84,13 +76,13 @@ let y=e.acceleration.y||0;
 let z=e.acceleration.z||0;
 
 document.getElementById("xyz").innerText=
-"X: "+x.toFixed(3)+" | Y: "+y.toFixed(3)+" | Z: "+z.toFixed(3);
+"X:"+x.toFixed(2)+" | Y:"+y.toFixed(2)+" | Z:"+z.toFixed(2);
 
 if(!collecting) return;
 
 let mag=Math.sqrt(x*x+y*y+z*z);
 rawData.push(mag);
-}
+});
 
 function processSignal(){
 
@@ -109,11 +101,6 @@ diff.push(rawData[i]-rawData[i-1]);
 let mean=diff.reduce((a,b)=>a+b,0)/diff.length;
 diff=diff.map(v=>v-mean);
 
-for(let i=0;i<diff.length;i++){
-let w=0.54-0.46*Math.cos((2*Math.PI*i)/(diff.length-1));
-diff[i]*=w;
-}
-
 let fftResult=fft(diff);
 let freqResolution=sampleRate/diff.length;
 
@@ -123,7 +110,6 @@ let totalEnergy=0;
 for(let i=0;i<fftResult.length;i++){
 let freq=i*freqResolution;
 totalEnergy+=fftResult[i];
-
 if(freq>=8 && freq<=12){
 bandEnergy+=fftResult[i];
 }
@@ -131,8 +117,8 @@ bandEnergy+=fftResult[i];
 
 drawGraph(fftResult,freqResolution);
 
-// 🔒 יציבות חישוב
-if(totalEnergy < 0.01){
+// 🔒 סינון שולחן
+if(totalEnergy < 0.05 || bandEnergy < 0.001){
 showResult(0);
 return;
 }
@@ -144,14 +130,12 @@ showResult(score);
 }
 
 function showResult(score){
-if(score>10){
+if(score>15){
 document.getElementById("result").style.color="#00ff99";
-document.getElementById("result").innerText=
-"Biological Activity Detected\nScore: "+score.toFixed(0)+"%";
+document.getElementById("result").innerText="Biological Activity: "+score.toFixed(0)+"%";
 }else{
 document.getElementById("result").style.color="#ff4d4d";
-document.getElementById("result").innerText=
-"Low Biological Signal\nScore: "+score.toFixed(0)+"%";
+document.getElementById("result").innerText="Low Biological Signal: "+score.toFixed(0)+"%";
 }
 }
 
@@ -173,19 +157,63 @@ return result;
 function drawGraph(data,res){
 let canvas=document.getElementById("freqGraph");
 let ctx=canvas.getContext("2d");
-ctx.clearRect(0,0,320,160);
+ctx.clearRect(0,0,320,120);
 ctx.strokeStyle="#00c6ff";
 ctx.beginPath();
-
 for(let i=0;i<data.length;i++){
 let freq=i*res;
 if(freq>20) break;
 let x=i*5;
-let y=160-data[i]*300;
+let y=120-data[i]*200;
 if(i===0) ctx.moveTo(x,y);
 else ctx.lineTo(x,y);
 }
 ctx.stroke();
+}
+
+// -------- Dynamic Line Challenge --------
+
+let drawCanvas=document.getElementById("drawArea");
+let dctx=drawCanvas.getContext("2d");
+
+function drawGuide(){
+dctx.clearRect(0,0,320,200);
+dctx.strokeStyle="yellow";
+dctx.lineWidth=4;
+dctx.beginPath();
+dctx.moveTo(20,100);
+dctx.lineTo(300,100);
+dctx.stroke();
+}
+
+drawGuide();
+
+let points=[];
+drawCanvas.addEventListener("touchmove",function(e){
+e.preventDefault();
+let rect=drawCanvas.getBoundingClientRect();
+let x=e.touches[0].clientX-rect.left;
+let y=e.touches[0].clientY-rect.top;
+
+points.push({x,y});
+
+dctx.fillStyle="cyan";
+dctx.fillRect(x,y,3,3);
+});
+
+drawCanvas.addEventListener("touchend",function(){
+evaluateLine();
+});
+
+function evaluateLine(){
+let valid=0;
+for(let p of points){
+if(Math.abs(p.y-100)<20) valid++;
+}
+let accuracy=(valid/points.length)*100;
+alert("Line Accuracy: "+accuracy.toFixed(0)+"%");
+points=[];
+drawGuide();
 }
 </script>
 
