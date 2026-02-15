@@ -1,169 +1,210 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>EBC Human Presence Engine</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EBC Human Presence Engine</title>
 <style>
 body{
 margin:0;
+background:black;
+color:#00f7ff;
 font-family:Arial;
 text-align:center;
-background:radial-gradient(circle at top,#0f2027,#000);
-color:#00f7ff;
+overflow:hidden;
 }
+
+canvas{
+border:1px solid #00f7ff;
+margin-top:10px;
+background:#111;
+touch-action:none;
+}
+
 button{
 padding:12px 25px;
 font-size:16px;
-border-radius:6px;
 border:none;
 background:#00f7ff;
 color:black;
+margin-top:15px;
 cursor:pointer;
-margin:10px;
 }
-canvas{
-background:#111;
-margin-top:15px;
-touch-action:none;
-border:1px solid #00f7ff;
-}
+
 #result{
-font-size:22px;
+font-size:20px;
 margin-top:15px;
-font-weight:bold;
+white-space:pre-line;
+}
+
+#stars{
+position:fixed;
+top:0;
+left:0;
+z-index:-1;
 }
 </style>
 </head>
 <body>
 
+<canvas id="stars"></canvas>
+
 <h2>EBC – Human Presence Verification</h2>
-<button onclick="startTest()">Run Verification</button>
+<button onclick="startVerification()">Run Verification</button>
 
 <div id="result"></div>
+
+<canvas id="xyzGraph" width="320" height="120"></canvas>
 <canvas id="drawArea" width="320" height="200"></canvas>
 
 <script>
+// ------------------- STAR BACKGROUND -------------------
+let starCanvas=document.getElementById("stars");
+let sctx=starCanvas.getContext("2d");
+starCanvas.width=window.innerWidth;
+starCanvas.height=window.innerHeight;
+let stars=[];
+for(let i=0;i<100;i++){
+stars.push({x:Math.random()*starCanvas.width,
+y:Math.random()*starCanvas.height,
+r:Math.random()*2});
+}
+function animateStars(){
+sctx.clearRect(0,0,starCanvas.width,starCanvas.height);
+sctx.fillStyle="#00f7ff";
+for(let s of stars){
+s.y+=0.5;
+if(s.y>starCanvas.height) s.y=0;
+sctx.beginPath();
+sctx.arc(s.x,s.y,s.r,0,2*Math.PI);
+sctx.fill();
+}
+requestAnimationFrame(animateStars);
+}
+animateStars();
+
+// ------------------- VARIABLES -------------------
 let rawData=[];
 let collecting=false;
-let sampleRate=0;
 let tremorScore=0;
+let points=[];
+let challengeType=0;
+let xyzHistory=[];
 
-function startTest(){
+// ------------------- MAIN FLOW -------------------
+function startVerification(){
 rawData=[];
+xyzHistory=[];
+points=[];
 collecting=true;
 tremorScore=0;
-document.getElementById("result").innerText="Collecting Tremor...";
+document.getElementById("result").innerText="Running Verification...";
+startChallenge();
 setTimeout(()=>{
 collecting=false;
 processSignal();
+evaluateChallenge();
 },5000);
 }
 
+// ------------------- MOTION CAPTURE -------------------
 window.addEventListener("devicemotion",function(e){
 if(!collecting) return;
 if(!e.acceleration) return;
+
 let x=e.acceleration.x||0;
 let y=e.acceleration.y||0;
 let z=e.acceleration.z||0;
+
 let mag=Math.sqrt(x*x+y*y+z*z);
 rawData.push(mag);
+xyzHistory.push({x,y,z});
+
+drawXYZ(x,y,z);
 });
 
+// ------------------- XYZ GRAPH -------------------
+let xyzCanvas=document.getElementById("xyzGraph");
+let xctx=xyzCanvas.getContext("2d");
+
+function drawXYZ(x,y,z){
+xctx.clearRect(0,0,320,120);
+xctx.strokeStyle="red";
+xctx.beginPath();
+xctx.moveTo(0,60);
+xctx.lineTo(320,60+x*10);
+xctx.stroke();
+
+xctx.strokeStyle="green";
+xctx.beginPath();
+xctx.moveTo(0,60);
+xctx.lineTo(320,60+y*10);
+xctx.stroke();
+
+xctx.strokeStyle="blue";
+xctx.beginPath();
+xctx.moveTo(0,60);
+xctx.lineTo(320,60+z*10);
+xctx.stroke();
+}
+
+// ------------------- TREMOR ANALYSIS -------------------
 function processSignal(){
 
 if(rawData.length<30){
-document.getElementById("result").innerText="Not enough data";
+tremorScore=0;
 return;
 }
-
-sampleRate=rawData.length/5;
 
 let mean=rawData.reduce((a,b)=>a+b,0)/rawData.length;
 let variance=rawData.reduce((a,b)=>a+(b-mean)*(b-mean),0)/rawData.length;
 let std=Math.sqrt(variance);
 
-let diff=[];
-for(let i=1;i<rawData.length;i++){
-diff.push(rawData[i]-rawData[i-1]);
-}
-
-let fftResult=fft(diff);
-let freqResolution=sampleRate/diff.length;
-
-let bandEnergy=0;
-let totalEnergy=0;
-
-for(let i=0;i<fftResult.length;i++){
-let freq=i*freqResolution;
-totalEnergy+=fftResult[i];
-if(freq>=8 && freq<=12){
-bandEnergy+=fftResult[i];
-}
-}
-
-// 🔒 Gate condition
-if(totalEnergy < 0.1 || std < 0.01){
+// Gate 1: No movement
+if(std < 0.015){
 tremorScore=0;
-}else{
-let ratio=bandEnergy/(totalEnergy+0.00001);
-tremorScore=Math.min(100,ratio*600);
+return;
 }
 
-startChallenge();
+// Gate 2: Continuity
+let significantChanges=0;
+for(let i=1;i<rawData.length;i++){
+if(Math.abs(rawData[i]-rawData[i-1])>0.02){
+significantChanges++;
+}
 }
 
-function fft(signal){
-let N=signal.length;
-let result=[];
-for(let k=0;k<N/2;k++){
-let real=0,imag=0;
-for(let n=0;n<N;n++){
-let angle=2*Math.PI*k*n/N;
-real+=signal[n]*Math.cos(angle);
-imag-=signal[n]*Math.sin(angle);
-}
-result[k]=Math.sqrt(real*real+imag*imag)/N;
-}
-return result;
+if(significantChanges < rawData.length*0.1){
+tremorScore=0;
+return;
 }
 
-// ---------- Dynamic Challenge ----------
+tremorScore=Math.min(100,std*1500);
+}
 
+// ------------------- DYNAMIC CHALLENGE -------------------
 let canvas=document.getElementById("drawArea");
 let ctx=canvas.getContext("2d");
-let points=[];
-let currentChallenge=0;
 
 function startChallenge(){
-points=[];
 ctx.clearRect(0,0,320,200);
-currentChallenge=Math.floor(Math.random()*4);
+challengeType=Math.floor(Math.random()*3);
 ctx.strokeStyle="#00f7ff";
 ctx.lineWidth=3;
 ctx.beginPath();
 
-if(currentChallenge===0){ // horizontal
+if(challengeType===0){
 ctx.moveTo(20,100);
 ctx.lineTo(300,100);
 }
-if(currentChallenge===1){ // vertical
+if(challengeType===1){
 ctx.moveTo(160,20);
 ctx.lineTo(160,180);
 }
-if(currentChallenge===2){ // zigzag
-ctx.moveTo(20,150);
-ctx.lineTo(80,50);
-ctx.lineTo(140,150);
-ctx.lineTo(200,50);
-ctx.lineTo(260,150);
-}
-if(currentChallenge===3){ // triangle
-ctx.moveTo(80,150);
+if(challengeType===2){
+ctx.moveTo(50,150);
 ctx.lineTo(160,50);
-ctx.lineTo(240,150);
-ctx.lineTo(80,150);
+ctx.lineTo(270,150);
 }
-
 ctx.stroke();
 }
 
@@ -177,34 +218,33 @@ ctx.fillStyle="white";
 ctx.fillRect(x,y,3,3);
 });
 
-canvas.addEventListener("touchend",function(){
-evaluateChallenge();
-});
-
 function evaluateChallenge(){
-
 let valid=0;
-
 for(let p of points){
-if(currentChallenge===0 && Math.abs(p.y-100)<20) valid++;
-if(currentChallenge===1 && Math.abs(p.x-160)<20) valid++;
-if(currentChallenge===2 && p.y<160 && p.y>40) valid++;
-if(currentChallenge===3 && p.y<160 && p.y>40) valid++;
+if(challengeType===0 && Math.abs(p.y-100)<20) valid++;
+if(challengeType===1 && Math.abs(p.x-160)<20) valid++;
+if(challengeType===2 && p.y<170 && p.y>40) valid++;
+}
+let accuracy=(valid/(points.length||1))*100;
+showFinalResult(accuracy);
 }
 
-let accuracy=(valid/points.length)*100;
+// ------------------- FINAL RESULT -------------------
+function showFinalResult(accuracy){
 
 let finalScore=(tremorScore*0.6)+(accuracy*0.4);
 
-if(finalScore>50){
+let level="Weak";
+if(finalScore>40) level="Moderate";
+if(finalScore>70) level="Strong";
+
+if(finalScore<40){
 document.getElementById("result").innerText=
-"Human Verified\nTremor: "+tremorScore.toFixed(0)+"% | Challenge: "+accuracy.toFixed(0)+"%";
+"Verification Failed\nTremor: "+tremorScore.toFixed(0)+"%\nChallenge: "+accuracy.toFixed(0)+"%\nLevel: "+level;
 }else{
 document.getElementById("result").innerText=
-"Verification Failed\nTremor: "+tremorScore.toFixed(0)+"% | Challenge: "+accuracy.toFixed(0)+"%";
+"Human Verified\nTremor: "+tremorScore.toFixed(0)+"%\nChallenge: "+accuracy.toFixed(0)+"%\nLevel: "+level;
 }
-
-points=[];
 }
 </script>
 
