@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EBC Motion Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            margin-top: 50px;
+        }
+        .value {
+            font-size: 24px;
+            margin: 10px;
+        }
+        button {
+            padding: 15px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>EBC Motion Sensor Test</h1>
+<p>Press the button to start sensor reading</p>
+
+<button onclick="requestPermission()">Start Sensor</button>
+
+<div class="value">X: <span id="x">0</span></div>
+<div class="value">Y: <span id="y">0</span></div>
+<div class="value">Z: <span id="z">0</span></div>
+
+<script>
+function requestPermission() {
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission()
+            .then(permissionState => {
+                if (permissionState === 'granted') {
+                    window.addEventListener('devicemotion', handleMotion);
+                }
+            })
+            .catch(console.error);
+    } else {
+        window.addEventListener('devicemotion', handleMotion);
+    }
+}
+
+function handleMotion(event) {
+    document.getElementById("x").textContent = event.accelerationIncludingGravity.x.toFixed(2);
+    document.getElementById("y").textContent = event.accelerationIncludingGravity.y.toFixed(2);
+    document.getElementById("z").textContent = event.accelerationIncludingGravity.z.toFixed(2);
+}
+</script>
+
+</body>
+</html>
