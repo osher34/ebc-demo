@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EBC Human Presence Engine</title>
+<title>EBC Human Verification</title>
 <style>
 body{
 margin:0;
@@ -10,7 +10,14 @@ background:black;
 color:#00f7ff;
 font-family:Arial;
 text-align:center;
-overflow:hidden;
+overflow:auto;
+}
+
+#stars{
+position:fixed;
+top:0;
+left:0;
+z-index:-1;
 }
 
 canvas{
@@ -36,25 +43,58 @@ font-size:14px;
 }
 
 #result{
-margin-top:15px;
+margin-top:20px;
 font-size:18px;
 white-space:pre-line;
+padding-bottom:40px;
 }
 </style>
 </head>
 <body>
 
-<h2>EBC – Time Coupled Human Verification</h2>
+<canvas id="stars"></canvas>
+
+<h2>EBC – Time Coupled Verification</h2>
 <button onclick="startVerification()">Run Verification</button>
 
 <div id="xyzValues">X: 0 | Y: 0 | Z: 0</div>
+<div id="result"></div>
+
 <canvas id="graph" width="320" height="150"></canvas>
 <canvas id="drawArea" width="320" height="200"></canvas>
 
-<div id="result"></div>
-
 <script>
 
+// -------- STARS BACKGROUND --------
+let starCanvas=document.getElementById("stars");
+let sctx=starCanvas.getContext("2d");
+starCanvas.width=window.innerWidth;
+starCanvas.height=window.innerHeight;
+
+let stars=[];
+for(let i=0;i<100;i++){
+stars.push({
+x:Math.random()*starCanvas.width,
+y:Math.random()*starCanvas.height,
+r:Math.random()*2
+});
+}
+
+function animateStars(){
+sctx.clearRect(0,0,starCanvas.width,starCanvas.height);
+sctx.fillStyle="#00f7ff";
+for(let s of stars){
+s.y+=0.3;
+if(s.y>starCanvas.height) s.y=0;
+sctx.beginPath();
+sctx.arc(s.x,s.y,s.r,0,2*Math.PI);
+sctx.fill();
+}
+requestAnimationFrame(animateStars);
+}
+animateStars();
+
+// -------- VARIABLES --------
 let collecting=false;
 let touchActive=false;
 let tremorSamples=[];
@@ -63,7 +103,7 @@ let tremorScore=0;
 let challengeType=0;
 let points=[];
 
-// ----------- START -----------
+// -------- START --------
 function startVerification(){
 tremorSamples=[];
 xyzHistory=[];
@@ -79,7 +119,7 @@ evaluateChallenge();
 },5000);
 }
 
-// ----------- MOTION LISTENER -----------
+// -------- MOTION --------
 window.addEventListener("devicemotion",function(e){
 if(!collecting || !touchActive || !e.acceleration) return;
 
@@ -97,7 +137,7 @@ xyzHistory.push({x,y,z});
 drawGraph();
 });
 
-// ----------- GRAPH -----------
+// -------- GRAPH --------
 let graphCanvas=document.getElementById("graph");
 let gctx=graphCanvas.getContext("2d");
 
@@ -134,7 +174,7 @@ gctx.stroke();
 }
 }
 
-// ----------- TREMOR PROCESS -----------
+// -------- TREMOR --------
 function processTremor(){
 
 if(tremorSamples.length < 20){
@@ -146,8 +186,8 @@ let mean=tremorSamples.reduce((a,b)=>a+b,0)/tremorSamples.length;
 let variance=tremorSamples.reduce((a,b)=>a+(b-mean)*(b-mean),0)/tremorSamples.length;
 let std=Math.sqrt(variance);
 
-// Human micro tremor window
-if(std < 0.01 || std > 0.3){
+// רק חסם תחתון
+if(std < 0.01){
 tremorScore=0;
 return;
 }
@@ -176,7 +216,7 @@ let variance=arr.reduce((a,b)=>a+(b-mean)*(b-mean),0)/arr.length;
 return Math.sqrt(variance);
 }
 
-// ----------- CHALLENGE -----------
+// -------- CHALLENGE --------
 let canvas=document.getElementById("drawArea");
 let ctx=canvas.getContext("2d");
 
@@ -204,13 +244,8 @@ ctx.lineTo(270,150);
 ctx.stroke();
 }
 
-canvas.addEventListener("touchstart",function(){
-touchActive=true;
-});
-
-canvas.addEventListener("touchend",function(){
-touchActive=false;
-});
+canvas.addEventListener("touchstart",()=>{touchActive=true;});
+canvas.addEventListener("touchend",()=>{touchActive=false;});
 
 canvas.addEventListener("touchmove",function(e){
 e.preventDefault();
@@ -222,7 +257,7 @@ ctx.fillStyle="white";
 ctx.fillRect(x,y,3,3);
 });
 
-// ----------- CHALLENGE EVAL -----------
+// -------- RESULT --------
 function evaluateChallenge(){
 let valid=0;
 for(let p of points){
@@ -234,7 +269,6 @@ let accuracy=(valid/(points.length||1))*100;
 showResult(accuracy);
 }
 
-// ----------- FINAL -----------
 function showResult(accuracy){
 
 if(tremorScore===0){
