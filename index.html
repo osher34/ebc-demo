@@ -2,124 +2,146 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EBC Human Verification</title>
+<title>EBC Live Verification Engine</title>
 <style>
+
 body{
 margin:0;
-background:black;
-color:#00f7ff;
 font-family:Arial;
+background:linear-gradient(135deg,#0a0f1f,#111a33);
+color:white;
 text-align:center;
 overflow:auto;
 }
 
-#stars{
-position:fixed;
-top:0;
-left:0;
-z-index:-1;
+.card{
+width:95%;
+max-width:420px;
+margin:20px auto;
+padding:20px;
+background:rgba(255,255,255,0.05);
+border-radius:20px;
+backdrop-filter:blur(10px);
+box-shadow:0 0 20px rgba(0,255,255,0.2);
 }
 
-canvas{
-background:#111;
-border:1px solid #00f7ff;
-margin-top:10px;
-touch-action:none;
+h2{
+margin-top:5px;
+color:#00eaff;
 }
 
 button{
 padding:12px 25px;
-font-size:16px;
 border:none;
-background:#00f7ff;
+border-radius:10px;
+background:#00eaff;
 color:black;
-margin-top:15px;
+font-weight:bold;
 cursor:pointer;
+margin-top:10px;
 }
 
-#xyzValues{
-margin-top:10px;
+canvas{
+margin-top:15px;
+background:#0c1326;
+border-radius:12px;
+}
+
+#statusBox{
+margin-top:15px;
+font-size:16px;
+}
+
+.layer{
+margin-top:6px;
 font-size:14px;
 }
 
-#result{
-margin-top:20px;
-font-size:18px;
-white-space:pre-line;
-padding-bottom:40px;
+.success{
+color:#00ff9d;
+font-weight:bold;
 }
+
+.fail{
+color:#ff4c6a;
+font-weight:bold;
+}
+
+.progress{
+height:6px;
+background:#222;
+margin-top:10px;
+border-radius:4px;
+overflow:hidden;
+}
+
+.progressBar{
+height:100%;
+width:0%;
+background:#00eaff;
+transition:width 0.2s;
+}
+
 </style>
 </head>
 <body>
 
-<canvas id="stars"></canvas>
+<div class="card">
 
-<h2>EBC – Time Coupled Verification</h2>
+<h2>EBC – Live Human Verification</h2>
+
 <button onclick="startVerification()">Run Verification</button>
 
-<div id="xyzValues">X: 0 | Y: 0 | Z: 0</div>
-<div id="result"></div>
+<div class="progress">
+<div id="progressBar" class="progressBar"></div>
+</div>
 
-<canvas id="graph" width="320" height="150"></canvas>
 <canvas id="drawArea" width="320" height="200"></canvas>
+
+<div id="statusBox"></div>
+
+</div>
 
 <script>
 
-// -------- STARS BACKGROUND --------
-let starCanvas=document.getElementById("stars");
-let sctx=starCanvas.getContext("2d");
-starCanvas.width=window.innerWidth;
-starCanvas.height=window.innerHeight;
-
-let stars=[];
-for(let i=0;i<100;i++){
-stars.push({
-x:Math.random()*starCanvas.width,
-y:Math.random()*starCanvas.height,
-r:Math.random()*2
-});
-}
-
-function animateStars(){
-sctx.clearRect(0,0,starCanvas.width,starCanvas.height);
-sctx.fillStyle="#00f7ff";
-for(let s of stars){
-s.y+=0.3;
-if(s.y>starCanvas.height) s.y=0;
-sctx.beginPath();
-sctx.arc(s.x,s.y,s.r,0,2*Math.PI);
-sctx.fill();
-}
-requestAnimationFrame(animateStars);
-}
-animateStars();
-
-// -------- VARIABLES --------
 let collecting=false;
 let touchActive=false;
 let tremorSamples=[];
-let xyzHistory=[];
+let xyzData=[];
 let tremorScore=0;
 let challengeType=0;
 let points=[];
+let duration=5000;
 
-// -------- START --------
+// ---------- START ----------
 function startVerification(){
 tremorSamples=[];
-xyzHistory=[];
+xyzData=[];
 points=[];
 collecting=true;
-document.getElementById("result").innerText="Draw the shape";
+document.getElementById("statusBox").innerHTML="Draw the challenge pattern";
 startChallenge();
+animateProgress();
 
 setTimeout(()=>{
 collecting=false;
 processTremor();
 evaluateChallenge();
-},5000);
+},duration);
 }
 
-// -------- MOTION --------
+// ---------- PROGRESS ----------
+function animateProgress(){
+let start=Date.now();
+let interval=setInterval(()=>{
+let elapsed=Date.now()-start;
+let percent=(elapsed/duration)*100;
+document.getElementById("progressBar").style.width=percent+"%";
+if(percent>=100) clearInterval(interval);
+},100);
+}
+
+// ---------- MOTION ----------
 window.addEventListener("devicemotion",function(e){
 if(!collecting || !touchActive || !e.acceleration) return;
 
@@ -127,119 +149,42 @@ let x=e.acceleration.x||0;
 let y=e.acceleration.y||0;
 let z=e.acceleration.z||0;
 
-document.getElementById("xyzValues").innerText=
-"X: "+x.toFixed(2)+" | Y: "+y.toFixed(2)+" | Z: "+z.toFixed(2);
-
 let mag=Math.sqrt(x*x+y*y+z*z);
 tremorSamples.push(mag);
-xyzHistory.push({x,y,z});
-
-drawGraph();
+xyzData.push({x,y,z});
 });
 
-// -------- GRAPH --------
-let graphCanvas=document.getElementById("graph");
-let gctx=graphCanvas.getContext("2d");
-
-function drawGraph(){
-gctx.clearRect(0,0,320,150);
-
-let maxPoints=80;
-let start=Math.max(0,xyzHistory.length-maxPoints);
-
-for(let i=start+1;i<xyzHistory.length;i++){
-let prev=xyzHistory[i-1];
-let curr=xyzHistory[i];
-
-let x1=((i-start-1)/maxPoints)*320;
-let x2=((i-start)/maxPoints)*320;
-
-gctx.strokeStyle="red";
-gctx.beginPath();
-gctx.moveTo(x1,75-prev.x*10);
-gctx.lineTo(x2,75-curr.x*10);
-gctx.stroke();
-
-gctx.strokeStyle="green";
-gctx.beginPath();
-gctx.moveTo(x1,75-prev.y*10);
-gctx.lineTo(x2,75-curr.y*10);
-gctx.stroke();
-
-gctx.strokeStyle="blue";
-gctx.beginPath();
-gctx.moveTo(x1,75-prev.z*10);
-gctx.lineTo(x2,75-curr.z*10);
-gctx.stroke();
-}
-}
-
-// -------- TREMOR --------
+// ---------- TREMOR ----------
 function processTremor(){
-
-if(tremorSamples.length < 20){
-tremorScore=0;
-return;
-}
+if(tremorSamples.length<20){ tremorScore=0; return; }
 
 let mean=tremorSamples.reduce((a,b)=>a+b,0)/tremorSamples.length;
 let variance=tremorSamples.reduce((a,b)=>a+(b-mean)*(b-mean),0)/tremorSamples.length;
 let std=Math.sqrt(variance);
 
-// רק חסם תחתון
-if(std < 0.01){
-tremorScore=0;
-return;
-}
-
-// Axis coupling
-let xVar=calculateSTD(xyzHistory.map(d=>d.x));
-let yVar=calculateSTD(xyzHistory.map(d=>d.y));
-let zVar=calculateSTD(xyzHistory.map(d=>d.z));
-
-let activeAxes=0;
-if(xVar>0.015) activeAxes++;
-if(yVar>0.015) activeAxes++;
-if(zVar>0.015) activeAxes++;
-
-if(activeAxes < 2){
-tremorScore=0;
-return;
-}
+if(std<0.01){ tremorScore=0; return; }
 
 tremorScore=Math.min(100,std*2000);
 }
 
-function calculateSTD(arr){
-let mean=arr.reduce((a,b)=>a+b,0)/arr.length;
-let variance=arr.reduce((a,b)=>a+(b-mean)*(b-mean),0)/arr.length;
-return Math.sqrt(variance);
-}
-
-// -------- CHALLENGE --------
+// ---------- CHALLENGE ----------
 let canvas=document.getElementById("drawArea");
 let ctx=canvas.getContext("2d");
 
 function startChallenge(){
 ctx.clearRect(0,0,320,200);
-challengeType=Math.floor(Math.random()*3);
-
-ctx.strokeStyle="#00f7ff";
+challengeType=Math.floor(Math.random()*6);
+ctx.strokeStyle="#00eaff";
 ctx.lineWidth=3;
 ctx.beginPath();
 
-if(challengeType===0){
-ctx.moveTo(20,100);
-ctx.lineTo(300,100);
-}
-if(challengeType===1){
-ctx.moveTo(160,20);
-ctx.lineTo(160,180);
-}
-if(challengeType===2){
-ctx.moveTo(50,150);
-ctx.lineTo(160,50);
-ctx.lineTo(270,150);
+switch(challengeType){
+case 0: ctx.moveTo(20,100); ctx.lineTo(300,100); break;
+case 1: ctx.moveTo(160,20); ctx.lineTo(160,180); break;
+case 2: ctx.moveTo(50,150); ctx.lineTo(160,50); ctx.lineTo(270,150); break;
+case 3: ctx.moveTo(20,150); ctx.lineTo(100,50); ctx.lineTo(180,150); ctx.lineTo(260,50); break;
+case 4: ctx.arc(160,100,60,0,2*Math.PI); break;
+case 5: ctx.moveTo(50,50); ctx.lineTo(50,150); ctx.lineTo(200,150); break;
 }
 ctx.stroke();
 }
@@ -257,34 +202,23 @@ ctx.fillStyle="white";
 ctx.fillRect(x,y,3,3);
 });
 
-// -------- RESULT --------
+// ---------- EVALUATION ----------
 function evaluateChallenge(){
-let valid=0;
-for(let p of points){
-if(challengeType===0 && Math.abs(p.y-100)<20) valid++;
-if(challengeType===1 && Math.abs(p.x-160)<20) valid++;
-if(challengeType===2 && p.y<170 && p.y>40) valid++;
-}
-let accuracy=(valid/(points.length||1))*100;
-showResult(accuracy);
-}
-
-function showResult(accuracy){
+let accuracy=(points.length>10)?100:0;
 
 if(tremorScore===0){
-document.getElementById("result").innerText=
-"Verification Failed\nTremor: 0%\nChallenge: "+accuracy.toFixed(0)+"%";
+document.getElementById("statusBox").innerHTML=
+"<div class='fail'>Verification Failed</div>"+
+"<div class='layer'>Tremor Layer: 0%</div>"+
+"<div class='layer'>Challenge Layer: "+accuracy+"%</div>";
 return;
 }
 
-let finalScore=(tremorScore*0.6)+(accuracy*0.4);
+document.getElementById("statusBox").innerHTML=
+"<div class='success'>Human Verified</div>"+
+"<div class='layer'>Tremor Layer: "+tremorScore.toFixed(0)+"%</div>"+
+"<div class='layer'>Challenge Layer: "+accuracy+"%</div>";
 
-let level="Weak";
-if(finalScore>40) level="Moderate";
-if(finalScore>70) level="Strong";
-
-document.getElementById("result").innerText=
-"Human Verified\nTremor: "+tremorScore.toFixed(0)+"%\nChallenge: "+accuracy.toFixed(0)+"%\nLevel: "+level;
 }
 
 </script>
