@@ -2,7 +2,8 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EBC Live Verification</title>
+<title>EBC Stable Build</title>
+
 <style>
 
 body{
@@ -11,6 +12,7 @@ font-family:Arial;
 background:linear-gradient(135deg,#0a0f1f,#111a33);
 color:white;
 text-align:center;
+overflow:hidden; /* מבטל גלילה */
 }
 
 .card{
@@ -22,8 +24,6 @@ background:rgba(255,255,255,0.05);
 border-radius:20px;
 box-shadow:0 0 25px rgba(0,255,255,0.2);
 }
-
-h2{color:#00eaff;margin:5px;}
 
 button{
 padding:10px 20px;
@@ -39,21 +39,7 @@ canvas{
 margin-top:10px;
 background:#0c1326;
 border-radius:12px;
-}
-
-#xyz{
-margin-top:8px;
-font-size:14px;
-}
-
-#result{
-margin-top:10px;
-font-size:16px;
-}
-
-.star{
-color:gold;
-font-size:20px;
+touch-action:none; /* מבטל scroll בזמן ציור */
 }
 
 .progress{
@@ -67,7 +53,12 @@ overflow:hidden;
 .progressBar{
 height:100%;
 width:0%;
-background:yellow; /* שינינו לצהוב */
+background:yellow;
+}
+
+.star{
+color:gold;
+font-size:20px;
 }
 
 </style>
@@ -75,6 +66,7 @@ background:yellow; /* שינינו לצהוב */
 <body>
 
 <div class="card">
+
 <h2>EBC – Human Presence</h2>
 <button onclick="startTest()">Run Verification</button>
 
@@ -82,7 +74,7 @@ background:yellow; /* שינינו לצהוב */
 <div id="bar" class="progressBar"></div>
 </div>
 
-<canvas id="challengeCanvas" width="320" height="120"></canvas>
+<canvas id="challenge" width="320" height="120"></canvas>
 
 <canvas id="graphX" width="320" height="60"></canvas>
 <canvas id="graphY" width="320" height="60"></canvas>
@@ -90,22 +82,20 @@ background:yellow; /* שינינו לצהוב */
 
 <div id="xyz">X:0 | Y:0 | Z:0</div>
 <div id="result"></div>
+
 </div>
 
 <script>
 
 let collecting=false;
-let tremorValues=[];
 let xArr=[],yArr=[],zArr=[];
+let tremorValues=[];
 let duration=5000;
-let challengeType=0;
 let points=[];
 
 function startTest(){
-tremorValues=[];
-xArr=[];yArr=[];zArr=[];
-points=[];
 collecting=true;
+xArr=[];yArr=[];zArr=[];tremorValues=[];points=[];
 document.getElementById("result").innerHTML="";
 animateBar();
 drawChallenge();
@@ -132,11 +122,6 @@ let x=e.acceleration.x||0;
 let y=e.acceleration.y||0;
 let z=e.acceleration.z||0;
 
-/* DEAD ZONE FILTER */
-if(Math.abs(x)<0.02) x=0;
-if(Math.abs(y)<0.02) y=0;
-if(Math.abs(z)<0.02) z=0;
-
 xArr.push(x);
 yArr.push(y);
 zArr.push(z);
@@ -150,26 +135,30 @@ document.getElementById("xyz").innerHTML=
 });
 
 function analyze(){
-if(tremorValues.length<10){
+
+if(xArr.length<10){
 document.getElementById("result").innerHTML="No Data";
 return;
 }
 
+/* ===== ABSOLUTE THRESHOLD ===== */
+let maxX=Math.max(...xArr.map(v=>Math.abs(v)));
+let maxY=Math.max(...yArr.map(v=>Math.abs(v)));
+let maxZ=Math.max(...zArr.map(v=>Math.abs(v)));
+
+if(maxX<0.11 && maxY<0.11 && maxZ<0.11){
+document.getElementById("result").innerHTML=
+"❌ Not Human<br>Tremor: 0%<br>Challenge: 0%";
+return;
+}
+
+/* ===== Tremor Score ===== */
 let mean=tremorValues.reduce((a,b)=>a+b)/tremorValues.length;
 let variance=tremorValues.reduce((a,b)=>a+(b-mean)*(b-mean),0)/tremorValues.length;
 let std=Math.sqrt(variance);
-
-let tremorScore=std<0.015?0:Math.min(100,std*1800);
+let tremorScore=Math.min(100,std*1800);
 
 let challengeScore=points.length>15?100:0;
-
-if(tremorScore===0){
-document.getElementById("result").innerHTML=
-"❌ Not Human<br>"+
-"Tremor: 0%<br>"+
-"Challenge: "+challengeScore+"%";
-return;
-}
 
 let stars=Math.round((tremorScore+challengeScore)/200*3);
 let starDisplay="";
@@ -203,38 +192,29 @@ else ctx.lineTo(x,y);
 ctx.stroke();
 }
 
-/* ---------- CHALLENGE ---------- */
+/* ===== Challenge ===== */
 
-let challengeCanvas=document.getElementById("challengeCanvas");
-let cctx=challengeCanvas.getContext("2d");
+let ch=document.getElementById("challenge");
+let ctx=ch.getContext("2d");
 
 function drawChallenge(){
-cctx.clearRect(0,0,320,120);
-challengeType=Math.floor(Math.random()*3);
-cctx.strokeStyle="#00eaff";
-cctx.lineWidth=3;
-cctx.beginPath();
-
-if(challengeType===0){
-cctx.moveTo(20,60); cctx.lineTo(300,60);
-}
-if(challengeType===1){
-cctx.moveTo(60,20); cctx.lineTo(60,100);
-}
-if(challengeType===2){
-cctx.arc(160,60,40,0,2*Math.PI);
+ctx.clearRect(0,0,320,120);
+ctx.strokeStyle="#00eaff";
+ctx.lineWidth=3;
+ctx.beginPath();
+ctx.moveTo(30,100);
+ctx.lineTo(250,30);
+ctx.stroke();
 }
 
-cctx.stroke();
-}
-
-challengeCanvas.addEventListener("touchmove",function(e){
-let rect=challengeCanvas.getBoundingClientRect();
+ch.addEventListener("touchmove",function(e){
+e.preventDefault();
+let rect=ch.getBoundingClientRect();
 let x=e.touches[0].clientX-rect.left;
 let y=e.touches[0].clientY-rect.top;
 points.push({x,y});
-cctx.fillStyle="white";
-cctx.fillRect(x,y,3,3);
+ctx.fillStyle="white";
+ctx.fillRect(x,y,3,3);
 });
 
 </script>
