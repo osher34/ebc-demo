@@ -2,16 +2,34 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EBC Cyber Build</title>
+<title>EBC Cyber Visual Build</title>
 
 <style>
+
 body{
 margin:0;
 font-family:Arial;
-background:radial-gradient(circle at top,#0f1a33,#050914);
+background:#050914;
 color:white;
 text-align:center;
 overflow:hidden;
+}
+
+/* Animated Cyber Background */
+body::before{
+content:"";
+position:fixed;
+width:200%;
+height:200%;
+background:radial-gradient(circle,#0ff2 1px,transparent 1px);
+background-size:40px 40px;
+animation:moveBg 20s linear infinite;
+z-index:-1;
+}
+
+@keyframes moveBg{
+from{transform:translate(0,0);}
+to{transform:translate(-200px,-200px);}
 }
 
 .card{
@@ -23,6 +41,11 @@ background:rgba(255,255,255,0.06);
 border-radius:20px;
 backdrop-filter:blur(12px);
 box-shadow:0 0 40px rgba(0,255,255,0.25);
+transition:0.4s;
+}
+
+.card.success{
+box-shadow:0 0 60px rgba(0,255,150,0.7);
 }
 
 button{
@@ -33,7 +56,7 @@ background:#00eaff;
 color:black;
 font-weight:bold;
 cursor:pointer;
-box-shadow:0 0 10px #00eaff;
+box-shadow:0 0 15px #00eaff;
 }
 
 canvas{
@@ -57,22 +80,36 @@ width:0%;
 background:yellow;
 }
 
-.star{
-color:gold;
-font-size:22px;
-text-shadow:0 0 8px gold;
-}
-
 #result{
 margin-top:10px;
-font-size:16px;
+font-size:18px;
+font-weight:bold;
+}
+
+.badge{
+font-size:22px;
+margin-top:5px;
+text-shadow:0 0 12px cyan;
+}
+
+.confetti{
+position:fixed;
+width:6px;
+height:6px;
+background:red;
+top:-10px;
+animation:fall 3s linear forwards;
+}
+
+@keyframes fall{
+to{transform:translateY(100vh) rotate(720deg);}
 }
 
 </style>
 </head>
 <body>
 
-<div class="card">
+<div class="card" id="card">
 
 <h2 style="color:#00eaff">EBC – Live Verification</h2>
 <button onclick="startTest()">Run Verification</button>
@@ -80,13 +117,13 @@ font-size:16px;
 <div class="progress"><div id="bar" class="progressBar"></div></div>
 
 <canvas id="challenge" width="320" height="120"></canvas>
-
 <canvas id="graphX" width="320" height="60"></canvas>
 <canvas id="graphY" width="320" height="60"></canvas>
 <canvas id="graphZ" width="320" height="60"></canvas>
 
 <div id="xyz">X:0 | Y:0 | Z:0</div>
 <div id="result"></div>
+<div class="badge" id="badge"></div>
 
 </div>
 
@@ -94,15 +131,16 @@ font-size:16px;
 
 let collecting=false;
 let xArr=[],yArr=[],zArr=[];
-let tremorValues=[];
 let duration=5000;
 let points=[];
 let challengeLine={x1:40,y1:100,x2:280,y2:20};
 
 function startTest(){
 collecting=true;
-xArr=[];yArr=[];zArr=[];tremorValues=[];points=[];
+xArr=[];yArr=[];zArr=[];points=[];
 document.getElementById("result").innerHTML="";
+document.getElementById("badge").innerHTML="";
+document.getElementById("card").classList.remove("success");
 animateBar();
 drawChallenge();
 setTimeout(()=>{collecting=false;analyze();},duration);
@@ -128,9 +166,6 @@ xArr.push(x);
 yArr.push(y);
 zArr.push(z);
 
-let mag=Math.sqrt(x*x+y*y+z*z);
-tremorValues.push(mag);
-
 drawGraphs();
 document.getElementById("xyz").innerHTML=
 "X:"+x.toFixed(2)+" | Y:"+y.toFixed(2)+" | Z:"+z.toFixed(2);
@@ -146,32 +181,38 @@ activeSamples++;
 }
 
 let ratio=activeSamples/xArr.length;
-
-let tremorScore=ratio>0.15?Math.min(100,ratio*200):0;
-
-/* Challenge Accuracy */
+let tremorScore=ratio>0.15?100:0;
 
 let totalDist=0;
 for(let p of points){
-let dist=pointToLineDistance(p,challengeLine);
-totalDist+=dist;
+totalDist+=pointToLineDistance(p,challengeLine);
 }
 let avgDist=points.length?totalDist/points.length:999;
-
 let challengeScore=avgDist<15?100:0;
 
 let finalHuman = tremorScore>0 && challengeScore>0;
 
-let stars=Math.round((tremorScore+challengeScore)/200*3);
-let starDisplay="";
-for(let i=0;i<stars;i++) starDisplay+="★";
+if(finalHuman){
+document.getElementById("result").innerHTML="✅ HUMAN VERIFIED";
+document.getElementById("badge").innerHTML="Neural Sync Confirmed";
+document.getElementById("card").classList.add("success");
+launchConfetti();
+}else{
+document.getElementById("result").innerHTML="❌ NOT HUMAN";
+document.getElementById("badge").innerHTML="Biometric Pattern Invalid";
+}
 
-document.getElementById("result").innerHTML=
-(finalHuman?"✅ Human Verified":"❌ Not Human")+"<br>"+
-"Tremor: "+tremorScore.toFixed(0)+"%<br>"+
-"Challenge: "+challengeScore+"%<br>"+
-"<span class='star'>"+starDisplay+"</span>";
+}
 
+function launchConfetti(){
+for(let i=0;i<40;i++){
+let c=document.createElement("div");
+c.className="confetti";
+c.style.left=Math.random()*100+"vw";
+c.style.background=`hsl(${Math.random()*360},100%,50%)`;
+document.body.appendChild(c);
+setTimeout(()=>c.remove(),3000);
+}
 }
 
 function pointToLineDistance(p,line){
