@@ -2,17 +2,16 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EBC Stable Build</title>
+<title>EBC Cyber Build</title>
 
 <style>
-
 body{
 margin:0;
 font-family:Arial;
-background:linear-gradient(135deg,#0a0f1f,#111a33);
+background:radial-gradient(circle at top,#0f1a33,#050914);
 color:white;
 text-align:center;
-overflow:hidden; /* מבטל גלילה */
+overflow:hidden;
 }
 
 .card{
@@ -20,9 +19,10 @@ width:95%;
 max-width:420px;
 margin:15px auto;
 padding:15px;
-background:rgba(255,255,255,0.05);
+background:rgba(255,255,255,0.06);
 border-radius:20px;
-box-shadow:0 0 25px rgba(0,255,255,0.2);
+backdrop-filter:blur(12px);
+box-shadow:0 0 40px rgba(0,255,255,0.25);
 }
 
 button{
@@ -33,13 +33,14 @@ background:#00eaff;
 color:black;
 font-weight:bold;
 cursor:pointer;
+box-shadow:0 0 10px #00eaff;
 }
 
 canvas{
 margin-top:10px;
 background:#0c1326;
 border-radius:12px;
-touch-action:none; /* מבטל scroll בזמן ציור */
+touch-action:none;
 }
 
 .progress{
@@ -58,7 +59,13 @@ background:yellow;
 
 .star{
 color:gold;
-font-size:20px;
+font-size:22px;
+text-shadow:0 0 8px gold;
+}
+
+#result{
+margin-top:10px;
+font-size:16px;
 }
 
 </style>
@@ -67,12 +74,10 @@ font-size:20px;
 
 <div class="card">
 
-<h2>EBC – Human Presence</h2>
+<h2 style="color:#00eaff">EBC – Live Verification</h2>
 <button onclick="startTest()">Run Verification</button>
 
-<div class="progress">
-<div id="bar" class="progressBar"></div>
-</div>
+<div class="progress"><div id="bar" class="progressBar"></div></div>
 
 <canvas id="challenge" width="320" height="120"></canvas>
 
@@ -92,6 +97,7 @@ let xArr=[],yArr=[],zArr=[];
 let tremorValues=[];
 let duration=5000;
 let points=[];
+let challengeLine={x1:40,y1:100,x2:280,y2:20};
 
 function startTest(){
 collecting=true;
@@ -99,11 +105,7 @@ xArr=[];yArr=[];zArr=[];tremorValues=[];points=[];
 document.getElementById("result").innerHTML="";
 animateBar();
 drawChallenge();
-
-setTimeout(()=>{
-collecting=false;
-analyze();
-},duration);
+setTimeout(()=>{collecting=false;analyze();},duration);
 }
 
 function animateBar(){
@@ -116,7 +118,7 @@ if(p>=100) clearInterval(interval);
 }
 
 window.addEventListener("devicemotion",function(e){
-if(!collecting || !e.acceleration) return;
+if(!collecting||!e.acceleration)return;
 
 let x=e.acceleration.x||0;
 let y=e.acceleration.y||0;
@@ -136,39 +138,47 @@ document.getElementById("xyz").innerHTML=
 
 function analyze(){
 
-if(xArr.length<10){
-document.getElementById("result").innerHTML="No Data";
-return;
+let activeSamples=0;
+for(let i=0;i<xArr.length;i++){
+if(Math.abs(xArr[i])>0.11 || Math.abs(yArr[i])>0.11 || Math.abs(zArr[i])>0.11){
+activeSamples++;
+}
 }
 
-/* ===== ABSOLUTE THRESHOLD ===== */
-let maxX=Math.max(...xArr.map(v=>Math.abs(v)));
-let maxY=Math.max(...yArr.map(v=>Math.abs(v)));
-let maxZ=Math.max(...zArr.map(v=>Math.abs(v)));
+let ratio=activeSamples/xArr.length;
 
-if(maxX<0.11 && maxY<0.11 && maxZ<0.11){
-document.getElementById("result").innerHTML=
-"❌ Not Human<br>Tremor: 0%<br>Challenge: 0%";
-return;
+let tremorScore=ratio>0.15?Math.min(100,ratio*200):0;
+
+/* Challenge Accuracy */
+
+let totalDist=0;
+for(let p of points){
+let dist=pointToLineDistance(p,challengeLine);
+totalDist+=dist;
 }
+let avgDist=points.length?totalDist/points.length:999;
 
-/* ===== Tremor Score ===== */
-let mean=tremorValues.reduce((a,b)=>a+b)/tremorValues.length;
-let variance=tremorValues.reduce((a,b)=>a+(b-mean)*(b-mean),0)/tremorValues.length;
-let std=Math.sqrt(variance);
-let tremorScore=Math.min(100,std*1800);
+let challengeScore=avgDist<15?100:0;
 
-let challengeScore=points.length>15?100:0;
+let finalHuman = tremorScore>0 && challengeScore>0;
 
 let stars=Math.round((tremorScore+challengeScore)/200*3);
 let starDisplay="";
 for(let i=0;i<stars;i++) starDisplay+="★";
 
 document.getElementById("result").innerHTML=
-"✅ Human Verified<br>"+
+(finalHuman?"✅ Human Verified":"❌ Not Human")+"<br>"+
 "Tremor: "+tremorScore.toFixed(0)+"%<br>"+
 "Challenge: "+challengeScore+"%<br>"+
 "<span class='star'>"+starDisplay+"</span>";
+
+}
+
+function pointToLineDistance(p,line){
+let A=line.y2-line.y1;
+let B=line.x1-line.x2;
+let C=line.x2*line.y1-line.x1*line.y2;
+return Math.abs(A*p.x+B*p.y+C)/Math.sqrt(A*A+B*B);
 }
 
 function drawGraphs(){
@@ -186,13 +196,11 @@ ctx.beginPath();
 for(let i=0;i<data.length;i++){
 let x=i;
 let y=30-data[i]*10;
-if(i===0) ctx.moveTo(x,y);
+if(i===0)ctx.moveTo(x,y);
 else ctx.lineTo(x,y);
 }
 ctx.stroke();
 }
-
-/* ===== Challenge ===== */
 
 let ch=document.getElementById("challenge");
 let ctx=ch.getContext("2d");
@@ -202,8 +210,8 @@ ctx.clearRect(0,0,320,120);
 ctx.strokeStyle="#00eaff";
 ctx.lineWidth=3;
 ctx.beginPath();
-ctx.moveTo(30,100);
-ctx.lineTo(250,30);
+ctx.moveTo(challengeLine.x1,challengeLine.y1);
+ctx.lineTo(challengeLine.x2,challengeLine.y2);
 ctx.stroke();
 }
 
