@@ -2,32 +2,33 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EBC Cyber Visual Build</title>
+<title>EBC – Cyber Neural Build</title>
 
 <style>
-
 body{
 margin:0;
-font-family:Arial;
-background:#050914;
+font-family:Arial, sans-serif;
+background:#04070f;
 color:white;
 text-align:center;
 overflow:hidden;
 }
 
-/* Animated Cyber Background */
+/* Neural Grid Background */
 body::before{
 content:"";
 position:fixed;
 width:200%;
 height:200%;
-background:radial-gradient(circle,#0ff2 1px,transparent 1px);
+background-image:
+linear-gradient(rgba(0,255,200,0.05) 1px, transparent 1px),
+linear-gradient(90deg, rgba(0,255,200,0.05) 1px, transparent 1px);
 background-size:40px 40px;
-animation:moveBg 20s linear infinite;
+animation:gridMove 25s linear infinite;
 z-index:-1;
 }
 
-@keyframes moveBg{
+@keyframes gridMove{
 from{transform:translate(0,0);}
 to{transform:translate(-200px,-200px);}
 }
@@ -35,33 +36,37 @@ to{transform:translate(-200px,-200px);}
 .card{
 width:95%;
 max-width:420px;
-margin:15px auto;
-padding:15px;
-background:rgba(255,255,255,0.06);
+margin:20px auto;
+padding:20px;
+background:rgba(255,255,255,0.05);
 border-radius:20px;
-backdrop-filter:blur(12px);
-box-shadow:0 0 40px rgba(0,255,255,0.25);
+backdrop-filter:blur(10px);
+box-shadow:0 0 25px rgba(0,255,200,0.15);
 transition:0.4s;
 }
 
 .card.success{
-box-shadow:0 0 60px rgba(0,255,150,0.7);
+box-shadow:0 0 60px rgba(0,255,150,0.6);
+}
+
+.card.fail{
+box-shadow:0 0 60px rgba(255,0,60,0.6);
 }
 
 button{
-padding:10px 20px;
+padding:12px 24px;
 border:none;
 border-radius:10px;
-background:#00eaff;
+background:#00ffd0;
 color:black;
 font-weight:bold;
 cursor:pointer;
-box-shadow:0 0 15px #00eaff;
+box-shadow:0 0 15px #00ffd0;
 }
 
 canvas{
 margin-top:10px;
-background:#0c1326;
+background:#0b1324;
 border-radius:12px;
 touch-action:none;
 }
@@ -81,28 +86,23 @@ background:yellow;
 }
 
 #result{
-margin-top:10px;
-font-size:18px;
+margin-top:15px;
+font-size:20px;
 font-weight:bold;
+letter-spacing:1px;
 }
 
-.badge{
-font-size:22px;
+#badge{
 margin-top:5px;
-text-shadow:0 0 12px cyan;
+font-size:14px;
+color:#00ffd0;
+opacity:0.8;
 }
 
-.confetti{
-position:fixed;
-width:6px;
-height:6px;
-background:red;
-top:-10px;
-animation:fall 3s linear forwards;
-}
-
-@keyframes fall{
-to{transform:translateY(100vh) rotate(720deg);}
+#challengeScore{
+margin-top:8px;
+font-size:14px;
+opacity:0.8;
 }
 
 </style>
@@ -111,10 +111,12 @@ to{transform:translateY(100vh) rotate(720deg);}
 
 <div class="card" id="card">
 
-<h2 style="color:#00eaff">EBC – Live Verification</h2>
+<h2 style="color:#00ffd0">EBC – Verification Engine</h2>
 <button onclick="startTest()">Run Verification</button>
 
-<div class="progress"><div id="bar" class="progressBar"></div></div>
+<div class="progress">
+<div id="bar" class="progressBar"></div>
+</div>
 
 <canvas id="challenge" width="320" height="120"></canvas>
 <canvas id="graphX" width="320" height="60"></canvas>
@@ -122,8 +124,10 @@ to{transform:translateY(100vh) rotate(720deg);}
 <canvas id="graphZ" width="320" height="60"></canvas>
 
 <div id="xyz">X:0 | Y:0 | Z:0</div>
+
 <div id="result"></div>
-<div class="badge" id="badge"></div>
+<div id="badge"></div>
+<div id="challengeScore"></div>
 
 </div>
 
@@ -140,7 +144,8 @@ collecting=true;
 xArr=[];yArr=[];zArr=[];points=[];
 document.getElementById("result").innerHTML="";
 document.getElementById("badge").innerHTML="";
-document.getElementById("card").classList.remove("success");
+document.getElementById("challengeScore").innerHTML="";
+document.getElementById("card").classList.remove("success","fail");
 animateBar();
 drawChallenge();
 setTimeout(()=>{collecting=false;analyze();},duration);
@@ -173,6 +178,7 @@ document.getElementById("xyz").innerHTML=
 
 function analyze(){
 
+/* Tremor Decision Only */
 let activeSamples=0;
 for(let i=0;i<xArr.length;i++){
 if(Math.abs(xArr[i])>0.11 || Math.abs(yArr[i])>0.11 || Math.abs(zArr[i])>0.11){
@@ -181,38 +187,30 @@ activeSamples++;
 }
 
 let ratio=activeSamples/xArr.length;
-let tremorScore=ratio>0.15?100:0;
+let tremorDetected = ratio>0.15;
 
+/* Challenge Accuracy */
 let totalDist=0;
 for(let p of points){
 totalDist+=pointToLineDistance(p,challengeLine);
 }
 let avgDist=points.length?totalDist/points.length:999;
-let challengeScore=avgDist<15?100:0;
+let challengePercent = Math.max(0, 100 - avgDist*5);
+challengePercent = Math.min(100, challengePercent);
 
-let finalHuman = tremorScore>0 && challengeScore>0;
+document.getElementById("challengeScore").innerHTML=
+"Challenge Accuracy: "+challengePercent.toFixed(0)+"%";
 
-if(finalHuman){
-document.getElementById("result").innerHTML="✅ HUMAN VERIFIED";
-document.getElementById("badge").innerHTML="Neural Sync Confirmed";
+if(tremorDetected){
+document.getElementById("result").innerHTML="LIVE HUMAN DETECTED";
+document.getElementById("badge").innerHTML="Neural Activity Confirmed";
 document.getElementById("card").classList.add("success");
-launchConfetti();
 }else{
-document.getElementById("result").innerHTML="❌ NOT HUMAN";
-document.getElementById("badge").innerHTML="Biometric Pattern Invalid";
+document.getElementById("result").innerHTML="NOT HUMAN";
+document.getElementById("badge").innerHTML="No Physiological Tremor Detected";
+document.getElementById("card").classList.add("fail");
 }
 
-}
-
-function launchConfetti(){
-for(let i=0;i<40;i++){
-let c=document.createElement("div");
-c.className="confetti";
-c.style.left=Math.random()*100+"vw";
-c.style.background=`hsl(${Math.random()*360},100%,50%)`;
-document.body.appendChild(c);
-setTimeout(()=>c.remove(),3000);
-}
 }
 
 function pointToLineDistance(p,line){
@@ -223,9 +221,9 @@ return Math.abs(A*p.x+B*p.y+C)/Math.sqrt(A*A+B*B);
 }
 
 function drawGraphs(){
-drawLine("graphX",xArr,"red");
-drawLine("graphY",yArr,"lime");
-drawLine("graphZ",zArr,"cyan");
+drawLine("graphX",xArr,"#ff4d4d");
+drawLine("graphY",yArr,"#4dff88");
+drawLine("graphZ",zArr,"#4da6ff");
 }
 
 function drawLine(id,data,color){
@@ -248,7 +246,7 @@ let ctx=ch.getContext("2d");
 
 function drawChallenge(){
 ctx.clearRect(0,0,320,120);
-ctx.strokeStyle="#00eaff";
+ctx.strokeStyle="#00ffd0";
 ctx.lineWidth=3;
 ctx.beginPath();
 ctx.moveTo(challengeLine.x1,challengeLine.y1);
