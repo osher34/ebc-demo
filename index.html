@@ -245,32 +245,6 @@ document.getElementById("card").classList.add("fail");
 
 }
 
-/* Challenge Display Only */
-let totalDist=0;
-for(let p of points){
-totalDist+=pointToLineDistance(p,challengeLine);
-}
-let avgDist=points.length?totalDist/points.length:999;
-let challengePercent = Math.max(0, 100 - avgDist*5);
-challengePercent = Math.min(100, challengePercent);
-
-document.getElementById("challengeScore").innerHTML=
-"Challenge Accuracy: "+challengePercent.toFixed(0)+"%";
-
-if(tremorDetected){
-document.getElementById("result").innerHTML="LIVE HUMAN DETECTED";
-document.getElementById("badge").innerHTML=
-"Neural Variability Pattern Confirmed";
-document.getElementById("card").classList.add("success");
-}else{
-document.getElementById("result").innerHTML="NOT HUMAN";
-document.getElementById("badge").innerHTML=
-"No Micro-Physiological Variability";
-document.getElementById("card").classList.add("fail");
-}
-
-}
-
 function pointToLineDistance(p,line){
 let A=line.y2-line.y1;
 let B=line.x1-line.x2;
