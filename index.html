@@ -202,60 +202,48 @@ document.getElementById("xyz").innerHTML=
 
 function analyze(){
 
-function stdDev(arr){
-let mean = arr.reduce((a,b)=>a+b,0)/arr.length;
-let variance = arr.reduce((a,b)=>a+Math.pow(b-mean,2),0)/arr.length;
-return Math.sqrt(variance);
-}
+/* Tremor Decision Only - Simple Threshold */
 
-function zeroCrossings(arr){
-let count=0;
-for(let i=1;i<arr.length;i++){
-if((arr[i-1]>=0 && arr[i]<0) || (arr[i-1]<0 && arr[i]>=0)){
-count++;
-}
-}
-return count;
-}
-
-if(xArr.length < 10){
-document.getElementById("result").innerHTML="NOT ENOUGH DATA";
-return;
-}
-
-/* --- 1. Standard Deviation --- */
-let stdX = stdDev(xArr);
-let stdY = stdDev(yArr);
-let stdZ = stdDev(zArr);
-let avgStd = (stdX + stdY + stdZ)/3;
-
-/* --- 2. Zero Crossing --- */
-let zcX = zeroCrossings(xArr);
-let zcY = zeroCrossings(yArr);
-let zcZ = zeroCrossings(zArr);
-let avgZC = (zcX + zcY + zcZ)/3;
-
-/* --- 3. Micro Activity Ratio --- */
 let activeSamples=0;
+
 for(let i=0;i<xArr.length;i++){
-if(Math.abs(xArr[i])>0.05 || Math.abs(yArr[i])>0.05 || Math.abs(zArr[i])>0.05){
+if(
+Math.abs(xArr[i])>0.11 ||
+Math.abs(yArr[i])>0.11 ||
+Math.abs(zArr[i])>0.11
+){
 activeSamples++;
 }
 }
-let activityRatio = activeSamples/xArr.length;
 
-/* --- 4. Axis Spread --- */
-let axisSpread = Math.max(stdX,stdY,stdZ) - Math.min(stdX,stdY,stdZ);
+let ratio = activeSamples / xArr.length;
+let tremorDetected = ratio > 0.15;
 
-/* --- Scoring --- */
-let score=0;
+/* Challenge Display Only */
+let totalDist=0;
+for(let p of points){
+totalDist+=pointToLineDistance(p,challengeLine);
+}
+let avgDist=points.length?totalDist/points.length:999;
+let challengePercent = Math.max(0, 100 - avgDist*5);
+challengePercent = Math.min(100, challengePercent);
 
-if(avgStd > 0.05) score+=1;
-if(avgZC > 15) score+=1;
-if(activityRatio > 0.35) score+=1;
-if(axisSpread > 0.01) score+=1;
+document.getElementById("challengeScore").innerHTML=
+"Challenge Accuracy: "+challengePercent.toFixed(0)+"%";
 
-let tremorDetected = score >= 3;
+if(tremorDetected){
+document.getElementById("result").innerHTML="LIVE HUMAN DETECTED";
+document.getElementById("badge").innerHTML=
+"Physiological Tremor Confirmed";
+document.getElementById("card").classList.add("success");
+}else{
+document.getElementById("result").innerHTML="NOT HUMAN";
+document.getElementById("badge").innerHTML=
+"No Detectable Tremor";
+document.getElementById("card").classList.add("fail");
+}
+
+}
 
 /* Challenge Display Only */
 let totalDist=0;
