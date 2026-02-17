@@ -113,6 +113,9 @@ opacity:0.8;
 
 <h2 style="color:#00ffd0">EBC – Verification Engine</h2>
 <button onclick="startTest()">Run Verification</button>
+  <button id="enableMotion" style="display:none;margin-top:10px;">
+Enable Motion Sensors (iPhone)
+</button>
 
 <div class="progress">
 <div id="bar" class="progressBar"></div>
@@ -138,7 +141,28 @@ let xArr=[],yArr=[],zArr=[];
 let duration=5000;
 let points=[];
 let challengeLine={x1:40,y1:100,x2:280,y2:20};
+function isIOS(){
+return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
 
+window.addEventListener("load",function(){
+if(isIOS() && typeof DeviceMotionEvent.requestPermission === "function"){
+document.getElementById("enableMotion").style.display="inline-block";
+}
+});
+
+document.getElementById("enableMotion").addEventListener("click",function(){
+DeviceMotionEvent.requestPermission()
+.then(response=>{
+if(response==="granted"){
+alert("Sensors Enabled ✅");
+this.style.display="none";
+}else{
+alert("Permission Denied ❌");
+}
+})
+.catch(console.error);
+});
 function startTest(){
 collecting=true;
 xArr=[];yArr=[];zArr=[];points=[];
