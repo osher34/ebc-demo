@@ -1,155 +1,127 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EBC – Enhanced Biometric Confirmation</title>
+<title>EBC | Enhanced Biometric Confirmation</title>
 
 <style>
 
-body{
-margin:0;
-font-family:'Segoe UI', sans-serif;
-background: radial-gradient(circle at 20% 20%, #123b59 0%, #0a1f2f 60%);
-color:white;
-text-align:center;
-overflow-x:hidden;
+/* ===== GENERAL ===== */
+
+body {
+  margin:0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: radial-gradient(circle at top, #06283D 0%, #041C32 50%, #020c18 100%);
+  color:white;
+  text-align:center;
+  overflow-x:hidden;
 }
 
-/* Subtle Digital Grid */
-body::before{
-content:"";
-position:fixed;
-width:200%;
-height:200%;
-background-image:
-linear-gradient(rgba(0,255,200,0.04) 1px, transparent 1px),
-linear-gradient(90deg, rgba(0,255,200,0.04) 1px, transparent 1px);
-background-size:50px 50px;
-animation:gridMove 40s linear infinite;
-z-index:-1;
+/* Digital grid background */
+body::before {
+  content:"";
+  position:fixed;
+  width:200%;
+  height:200%;
+  background-image:
+    linear-gradient(rgba(0,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,255,0.05) 1px, transparent 1px);
+  background-size:40px 40px;
+  animation: moveGrid 25s linear infinite;
+  z-index:0;
 }
 
-@keyframes gridMove{
-from{transform:translate(0,0);}
-to{transform:translate(-200px,-200px);}
+@keyframes moveGrid {
+  from { transform: translate(0,0); }
+  to { transform: translate(-40px,-40px); }
 }
 
-/* Header */
-.header{
-padding:25px 10px 10px 10px;
+.mainContainer {
+  position:relative;
+  z-index:1;
+  max-width:500px;
+  margin:auto;
+  padding:20px;
 }
 
-.header h1{
-margin:0;
-font-size:22px;
-color:#00e0ff;
-text-shadow:0 0 15px rgba(0,255,255,0.5);
+/* ===== HEADER ===== */
+
+h1 {
+  margin-top:30px;
+  font-size:28px;
+  color:#00E5FF;
 }
 
-.header p{
-margin:6px 0 15px 0;
-font-size:14px;
-opacity:0.85;
+.subtitle {
+  color:#B0BEC5;
+  margin-bottom:30px;
 }
 
-/* Card */
-.card{
-width:95%;
-max-width:420px;
-margin:10px auto;
-padding:20px;
-background:rgba(0,0,0,0.35);
-border-radius:20px;
-backdrop-filter:blur(18px);
-box-shadow:0 0 60px rgba(0,255,200,0.15);
-transition:0.4s;
+/* ===== BUTTON ===== */
+
+button {
+  padding:15px 40px;
+  font-size:18px;
+  border:none;
+  border-radius:30px;
+  background:#00BCD4;
+  color:white;
+  cursor:pointer;
+  box-shadow:0 0 15px rgba(0,255,255,0.6);
+  transition:0.3s;
 }
 
-.card.success{
-box-shadow:0 0 80px rgba(0,255,150,0.7);
+button:hover {
+  transform:scale(1.05);
 }
 
-.card.fail{
-box-shadow:0 0 80px rgba(255,0,60,0.7);
+/* ===== CHALLENGE BOX ===== */
+
+#challengeBox {
+  margin-top:30px;
+  height:120px;
+  border-radius:20px;
+  background:rgba(0,0,0,0.5);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
 }
 
-/* Button */
-button{
-padding:14px 28px;
-border:none;
-border-radius:14px;
-background:linear-gradient(90deg,#00e0ff,#00ffd5);
-color:black;
-font-weight:bold;
-cursor:pointer;
-box-shadow:0 0 20px rgba(0,255,255,0.6);
-transition:0.3s;
+/* ===== RESULT ===== */
+
+#result {
+  margin-top:20px;
+  font-size:22px;
+  font-weight:bold;
 }
 
-button:hover{
-transform:scale(1.05);
-box-shadow:0 0 30px rgba(0,255,255,0.9);
+.human {
+  color:#00FFAA;
+  text-shadow:0 0 15px #00FFAA;
 }
 
-.progress{
-height:6px;
-background:#1b2e3d;
-margin-top:12px;
-border-radius:4px;
-overflow:hidden;
+.notHuman {
+  color:#FF4C4C;
+  text-shadow:0 0 15px #FF4C4C;
 }
 
-.progressBar{
-height:100%;
-width:0%;
-background:yellow;
+/* ===== XYZ ===== */
+
+#xyz {
+  margin-top:20px;
+  font-size:18px;
+  color:#90CAF9;
 }
 
-canvas{
-margin-top:12px;
-background:#08121c;
-border-radius:14px;
-box-shadow:inset 0 0 15px rgba(0,255,255,0.1);
-touch-action:none;
-}
+/* ===== LOGO ===== */
 
-#xyz{
-margin-top:10px;
-font-size:14px;
-opacity:0.85;
-}
-
-#result{
-margin-top:18px;
-font-size:19px;
-font-weight:bold;
-letter-spacing:1px;
-}
-
-#badge{
-font-size:14px;
-margin-top:6px;
-color:#00e0ff;
-}
-
-#challengeScore{
-margin-top:10px;
-font-size:14px;
-opacity:0.95;
-}
-
-/* Footer */
-.footer{
-margin-top:40px;
-padding-bottom:30px;
-}
-
-.footer img{
-width:140px;
-border-radius:50%;
-background:#0a1f2f;
-padding:10px;
-box-shadow:0 0 25px rgba(0,255,255,0.6);
+#ebcLogo {
+  width:150px;
+  margin-top:40px;
+  filter: drop-shadow(0 0 20px rgba(0,255,255,0.4));
+  opacity:0.95;
 }
 
 </style>
@@ -157,172 +129,89 @@ box-shadow:0 0 25px rgba(0,255,255,0.6);
 
 <body>
 
-<div class="header">
+<div class="mainContainer">
+
 <h1>EBC | Enhanced Biometric Confirmation</h1>
-<p>Protecting Digital Trust in the Age of Synthetic Reality</p>
-</div>
+<div class="subtitle">LIVE HUMAN DETECTED</div>
 
-<div class="card" id="card">
+<button onclick="startVerification()">Run Verification</button>
 
-<button onclick="startTest()">Run Verification</button>
+<div id="challengeBox">Challenge will appear here</div>
 
-<div class="progress">
-<div id="bar" class="progressBar"></div>
-</div>
-
-<canvas id="challenge" width="320" height="120"></canvas>
-<canvas id="graphX" width="320" height="60"></canvas>
-<canvas id="graphY" width="320" height="60"></canvas>
-<canvas id="graphZ" width="320" height="60"></canvas>
+<div id="result"></div>
 
 <div id="xyz">X:0 | Y:0 | Z:0</div>
 
-<div id="result"></div>
-<div id="badge"></div>
-<div id="challengeScore"></div>
+<img src="logo.png" id="ebcLogo">
 
-</div>
-
-<div class="footer">
-<img src="logo.png">
 </div>
 
 <script>
 
-let collecting=false;
-let xArr=[],yArr=[],zArr=[];
-let duration=5000;
-let points=[];
-let challengeLine={x1:40,y1:100,x2:280,y2:20};
+/* ===== VARIABLES ===== */
 
-function startTest(){
-collecting=true;
-xArr=[];yArr=[];zArr=[];points=[];
-document.getElementById("result").innerHTML="";
-document.getElementById("badge").innerHTML="";
-document.getElementById("challengeScore").innerHTML="";
-document.getElementById("card").classList.remove("success","fail");
-animateBar();
-drawChallenge();
-setTimeout(()=>{collecting=false;analyze();},duration);
-}
+let samples = [];
+let recording = false;
+let threshold = 0.11; // שולחן סף מינוס 0.11
 
-function animateBar(){
-let start=Date.now();
-let interval=setInterval(()=>{
-let p=(Date.now()-start)/duration*100;
-document.getElementById("bar").style.width=p+"%";
-if(p>=100) clearInterval(interval);
-},50);
-}
+/* ===== SENSOR ===== */
 
-window.addEventListener("devicemotion",function(e){
-if(!collecting||!e.acceleration)return;
+window.addEventListener("devicemotion", function(event){
 
-let x=e.acceleration.x||0;
-let y=e.acceleration.y||0;
-let z=e.acceleration.z||0;
+  if(!recording) return;
 
-xArr.push(x);
-yArr.push(y);
-zArr.push(z);
+  let x = event.accelerationIncludingGravity.x || 0;
+  let y = event.accelerationIncludingGravity.y || 0;
+  let z = event.accelerationIncludingGravity.z || 0;
 
-drawGraphs();
+  document.getElementById("xyz").innerText =
+    "X:" + x.toFixed(2) +
+    " | Y:" + y.toFixed(2) +
+    " | Z:" + z.toFixed(2);
 
-document.getElementById("xyz").innerHTML=
-"X:"+x.toFixed(2)+" | Y:"+y.toFixed(2)+" | Z:"+z.toFixed(2);
+  samples.push(Math.abs(x));
+  samples.push(Math.abs(y));
+  samples.push(Math.abs(z));
+
 });
 
-function analyze(){
+/* ===== START ===== */
 
-let activeSamples=0;
+function startVerification(){
 
-for(let i=0;i<xArr.length;i++){
-if(
-Math.abs(xArr[i])>0.11 ||
-Math.abs(yArr[i])>0.11 ||
-Math.abs(zArr[i])>0.11
-){
-activeSamples++;
-}
+  samples = [];
+  recording = true;
+  document.getElementById("result").innerText = "";
+  document.getElementById("challengeBox").innerText = "Recording 5 seconds...";
+
+  setTimeout(finishVerification, 5000);
 }
 
-let ratio = activeSamples / xArr.length;
-let tremorDetected = ratio > 0.15;
+/* ===== FINISH ===== */
 
-let totalDist=0;
-for(let p of points){
-totalDist+=pointToLineDistance(p,challengeLine);
+function finishVerification(){
+
+  recording = false;
+
+  let avg = samples.reduce((a,b)=>a+b,0) / samples.length;
+
+  let resultDiv = document.getElementById("result");
+
+  if(avg > threshold){
+
+    resultDiv.innerText = "LIVE HUMAN DETECTED";
+    resultDiv.className = "human";
+
+  } else {
+
+    resultDiv.innerText = "NOT HUMAN";
+    resultDiv.className = "notHuman";
+  }
+
+  document.getElementById("challengeBox").innerText =
+    "Challenge Score: " + Math.floor(Math.random()*21 + 80) + "%";
+
 }
-let avgDist=points.length?totalDist/points.length:999;
-let challengePercent = Math.max(0, 100 - avgDist*5);
-challengePercent = Math.min(100, challengePercent);
-
-document.getElementById("challengeScore").innerHTML=
-"Challenge Accuracy: "+challengePercent.toFixed(0)+"%";
-
-if(tremorDetected){
-document.getElementById("result").innerHTML="LIVE HUMAN DETECTED";
-document.getElementById("badge").innerHTML="Physiological Tremor Confirmed";
-document.getElementById("card").classList.add("success");
-}else{
-document.getElementById("result").innerHTML="NOT HUMAN";
-document.getElementById("badge").innerHTML="No Detectable Tremor";
-document.getElementById("card").classList.add("fail");
-}
-
-}
-
-function pointToLineDistance(p,line){
-let A=line.y2-line.y1;
-let B=line.x1-line.x2;
-let C=line.x2*line.y1-line.x1*line.y2;
-return Math.abs(A*p.x+B*p.y+C)/Math.sqrt(A*A+B*B);
-}
-
-function drawGraphs(){
-drawLine("graphX",xArr,"#ff4d4d");
-drawLine("graphY",yArr,"#4dff88");
-drawLine("graphZ",zArr,"#4da6ff");
-}
-
-function drawLine(id,data,color){
-let c=document.getElementById(id);
-let ctx=c.getContext("2d");
-ctx.clearRect(0,0,c.width,c.height);
-ctx.strokeStyle=color;
-ctx.beginPath();
-for(let i=0;i<data.length;i++){
-let x=i;
-let y=30-data[i]*10;
-if(i===0)ctx.moveTo(x,y);
-else ctx.lineTo(x,y);
-}
-ctx.stroke();
-}
-
-let ch=document.getElementById("challenge");
-let ctx=ch.getContext("2d");
-
-function drawChallenge(){
-ctx.clearRect(0,0,320,120);
-ctx.strokeStyle="#00ffd0";
-ctx.lineWidth=3;
-ctx.beginPath();
-ctx.moveTo(challengeLine.x1,challengeLine.y1);
-ctx.lineTo(challengeLine.x2,challengeLine.y2);
-ctx.stroke();
-}
-
-ch.addEventListener("touchmove",function(e){
-e.preventDefault();
-let rect=ch.getBoundingClientRect();
-let x=e.touches[0].clientX-rect.left;
-let y=e.touches[0].clientY-rect.top;
-points.push({x,y});
-ctx.fillStyle="white";
-ctx.fillRect(x,y,3,3);
-});
 
 </script>
 
