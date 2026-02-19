@@ -3,6 +3,11 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EBC – Enhanced Biometric Confirmation</title>
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EBC – Enhanced Biometric Confirmation</title>
 
 <style>
 
@@ -13,9 +18,10 @@ background: radial-gradient(circle at 20% 20%, #123b59 0%, #0a1f2f 60%);
 color:white;
 text-align:center;
 overflow-x:hidden;
+position:relative;
 }
 
-/* Subtle Digital Grid */
+/* ===== Digital Grid ===== */
 body::before{
 content:"";
 position:fixed;
@@ -26,12 +32,28 @@ linear-gradient(rgba(0,255,200,0.04) 1px, transparent 1px),
 linear-gradient(90deg, rgba(0,255,200,0.04) 1px, transparent 1px);
 background-size:50px 50px;
 animation:gridMove 40s linear infinite;
-z-index:-1;
+z-index:-3;
 }
 
 @keyframes gridMove{
 from{transform:translate(0,0);}
 to{transform:translate(-200px,-200px);}
+}
+
+/* ===== Brain Background ===== */
+body::after{
+content:"";
+position:fixed;
+right:-120px;
+bottom:-80px;
+width:500px;
+height:500px;
+background:url("brain.png") no-repeat center;
+background-size:contain;
+opacity:0.07;
+pointer-events:none;
+z-index:-2;
+filter:drop-shadow(0 0 40px rgba(0,255,255,0.4));
 }
 
 /* Header */
@@ -63,6 +85,8 @@ border-radius:20px;
 backdrop-filter:blur(18px);
 box-shadow:0 0 60px rgba(0,255,200,0.15);
 transition:0.4s;
+position:relative;
+z-index:1;
 }
 
 .card.success{
@@ -145,16 +169,21 @@ padding-bottom:30px;
 }
 
 .footer img{
-width:140px;
+width:170px;
 border-radius:50%;
 background:#0a1f2f;
-padding:10px;
-box-shadow:0 0 25px rgba(0,255,255,0.6);
+padding:12px;
+box-shadow:0 0 40px rgba(0,255,255,0.6);
+transition:0.4s;
+}
+
+.footer img:hover{
+transform:scale(1.05);
+box-shadow:0 0 60px rgba(0,255,255,0.9);
 }
 
 </style>
 </head>
-
 <body>
 
 <div class="header">
