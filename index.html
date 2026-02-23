@@ -4,11 +4,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EBC – Enhanced Biometric Confirmation</title>
 <script src="https://cdn.jsdelivr.net/npm/fft.js/dist/fft.min.js"></script>
-  <!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EBC – Enhanced Biometric Confirmation</title>
 
 <style>
 
@@ -268,6 +263,11 @@ document.getElementById("xyz").innerHTML=
 
 function analyze(){
 
+if(zArr.length < 32){
+document.getElementById("analysisStatus").innerHTML="Not enough motion data collected";
+return;
+}
+
 let activeSamples=0;
 
 for(let i=0;i<xArr.length;i++){
@@ -283,31 +283,46 @@ activeSamples++;
 let ratio = activeSamples / xArr.length;
 let tremorDetected = ratio > 0.15;
 
+let dominantFreq = 0;
+
+try{
+
 let samplingRate = xArr.length / 5;
 
-let fft = new FFT(zArr.length);
+let fftSize = 1;
+while(fftSize < zArr.length) fftSize *= 2;
+
+let padded = new Array(fftSize).fill(0);
+for(let i=0;i<zArr.length;i++){
+padded[i] = zArr[i];
+}
+
+let fft = new FFT(fftSize);
 let input = fft.createComplexArray();
 let output = fft.createComplexArray();
 
-for(let i=0;i<zArr.length;i++){
-input[2*i] = zArr[i];
+for(let i=0;i<fftSize;i++){
+input[2*i] = padded[i];
 input[2*i+1] = 0;
 }
 
 fft.transform(output, input);
 
 let maxMag = 0;
-let dominantFreq = 0;
 
-for(let i=1;i<zArr.length/2;i++){
+for(let i=1;i<fftSize/2;i++){
 let real = output[2*i];
 let imag = output[2*i+1];
 let mag = Math.sqrt(real*real + imag*imag);
 
 if(mag > maxMag){
 maxMag = mag;
-dominantFreq = i * samplingRate / zArr.length;
+dominantFreq = i * samplingRate / fftSize;
 }
+}
+
+}catch(e){
+dominantFreq = 0;
 }
 
 let tremorBandDetected = dominantFreq >= 6 && dominantFreq <= 14;
@@ -316,6 +331,7 @@ let totalDist=0;
 for(let p of points){
 totalDist+=pointToLineDistance(p,challengeLine);
 }
+
 let avgDist=points.length?totalDist/points.length:999;
 let challengePercent = Math.max(0, 100 - avgDist*5);
 challengePercent = Math.min(100, challengePercent);
@@ -336,7 +352,6 @@ if(tremorDetected && tremorBandDetected){
 document.getElementById("result").innerHTML="LIVE HUMAN DETECTED";
 document.getElementById("badge").innerHTML="Physiological Tremor Frequency Confirmed";
 document.getElementById("card").classList.add("success");
-launchConfetti();
 
 }else{
 
@@ -351,8 +366,6 @@ document.getElementById("analysisStatus").innerHTML="Biometric Analysis Complete
 },1500);
 
 }
-
-function pointToLineDistance(p,line){
 let A=line.y2-line.y1;
 let B=line.x1-line.x2;
 let C=line.x2*line.y1-line.x1*line.y2;
