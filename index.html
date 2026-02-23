@@ -3,7 +3,8 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EBC – Enhanced Biometric Confirmation</title>
-<!DOCTYPE html>
+<script src="https://cdn.jsdelivr.net/npm/fft.js/dist/fft.min.js"></script>
+  <!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -282,6 +283,35 @@ activeSamples++;
 let ratio = activeSamples / xArr.length;
 let tremorDetected = ratio > 0.15;
 
+let samplingRate = xArr.length / 5;
+
+let fft = new FFT(zArr.length);
+let input = fft.createComplexArray();
+let output = fft.createComplexArray();
+
+for(let i=0;i<zArr.length;i++){
+input[2*i] = zArr[i];
+input[2*i+1] = 0;
+}
+
+fft.transform(output, input);
+
+let maxMag = 0;
+let dominantFreq = 0;
+
+for(let i=1;i<zArr.length/2;i++){
+let real = output[2*i];
+let imag = output[2*i+1];
+let mag = Math.sqrt(real*real + imag*imag);
+
+if(mag > maxMag){
+maxMag = mag;
+dominantFreq = i * samplingRate / zArr.length;
+}
+}
+
+let tremorBandDetected = dominantFreq >= 6 && dominantFreq <= 14;
+
 let totalDist=0;
 for(let p of points){
 totalDist+=pointToLineDistance(p,challengeLine);
@@ -293,15 +323,32 @@ challengePercent = Math.min(100, challengePercent);
 document.getElementById("challengeScore").innerHTML=
 "Challenge Accuracy: "+challengePercent.toFixed(0)+"%";
 
-if(tremorDetected){
+document.getElementById("tremorMeter").innerHTML=
+"Dominant Tremor Frequency: "+dominantFreq.toFixed(2)+" Hz";
+
+document.getElementById("analysisStatus").innerHTML=
+"Analyzing Biometric Frequency Pattern...";
+
+setTimeout(()=>{
+
+if(tremorDetected && tremorBandDetected){
+
 document.getElementById("result").innerHTML="LIVE HUMAN DETECTED";
-document.getElementById("badge").innerHTML="Physiological Tremor Confirmed";
+document.getElementById("badge").innerHTML="Physiological Tremor Frequency Confirmed";
 document.getElementById("card").classList.add("success");
+launchConfetti();
+
 }else{
+
 document.getElementById("result").innerHTML="NOT HUMAN";
-document.getElementById("badge").innerHTML="No Detectable Tremor";
+document.getElementById("badge").innerHTML="No Valid Tremor Signature";
 document.getElementById("card").classList.add("fail");
+
 }
+
+document.getElementById("analysisStatus").innerHTML="Biometric Analysis Complete";
+
+},1500);
 
 }
 
