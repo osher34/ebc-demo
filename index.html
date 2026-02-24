@@ -293,22 +293,22 @@ document.getElementById("tremorMeter").innerHTML=
 document.getElementById("analysisStatus").innerHTML=
 "Analyzing Biometric Signature...";
 
-setTimeout(()=>{
+// FINAL DECISION
 
-if(tremorDetected && tremorBand){
+let isHuman = tremorDetected && tremorBand;
+
+if(isHuman){
 document.getElementById("result").innerHTML="LIVE HUMAN DETECTED";
 document.getElementById("badge").innerHTML="Physiological Tremor Confirmed";
 document.getElementById("card").classList.add("success");
+launchConfetti();
 }else{
 document.getElementById("result").innerHTML="NOT HUMAN";
 document.getElementById("badge").innerHTML="No Valid Tremor Signature";
 document.getElementById("card").classList.add("fail");
 }
 
-document.getElementById("analysisStatus").innerHTML=
-"Biometric Analysis Complete";
-
-},1000);
+document.getElementById("analysisStatus").innerHTML="Biometric Analysis Complete";
 
 }
 
