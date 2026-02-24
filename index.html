@@ -231,9 +231,8 @@ document.getElementById("xyz").innerHTML=
 /* ANALYZE */
 function analyze(){
 
-if(zArr.length<32){
-document.getElementById("analysisStatus").innerHTML="Not enough motion data";
-return;
+if(zArr.length<10){
+document.getElementById("analysisStatus").innerHTML="Low motion data – continuing analysis";
 }
 
 let active=0;
@@ -279,13 +278,46 @@ dominantFreq=i*samplingRate/fftSize;
 let tremorBand=(dominantFreq>=6 && dominantFreq<=14);
 
 let totalDist=0;
+
 for(let p of points){
-totalDist+=pointToLineDistance(p,challengeLine);
+
+if(challengeType===0){
+// Straight line
+totalDist+=pointToLineDistance(p,{x1:40,y1:100,x2:280,y2:20});
+}
+
+if(challengeType===1){
+// Arc distance
+let centerX=160;
+let centerY=60;
+let radius=50;
+let dx=p.x-centerX;
+let dy=p.y-centerY;
+let distFromCenter=Math.sqrt(dx*dx+dy*dy);
+totalDist+=Math.abs(distFromCenter-radius);
+}
+
+if(challengeType===2){
+// Zigzag (segment approximation)
+let segments=[
+{x1:40,y1:80,x2:100,y2:40},
+{x1:100,y1:40,x2:160,y2:90},
+{x1:160,y1:90,x2:220,y2:30},
+{x1:220,y1:30,x2:280,y2:80}
+];
+
+let minDist=999;
+for(let s of segments){
+let d=pointToLineDistance(p,s);
+if(d<minDist) minDist=d;
+}
+totalDist+=minDist;
+}
+
 }
 
 let avgDist=points.length?totalDist/points.length:999;
-let challengePercent=Math.max(0,100-avgDist*5);
-
+let challengePercent=Math.max(0,100-avgDist*4);
 document.getElementById("challengeScore").innerHTML=
 "Challenge Accuracy: "+challengePercent.toFixed(0)+"%";
 
