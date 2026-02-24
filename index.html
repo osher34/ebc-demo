@@ -155,7 +155,9 @@ box-shadow:0 0 40px rgba(0,255,255,0.6);
 <div id="challengeScore"></div>
 <div id="tremorMeter"></div>
 <div id="analysisStatus"></div>
-
+<video id="confettiVideo" width="100%" style="display:none; margin-top:15px;" muted>
+<source src="confetti.mp4" type="video/mp4">
+</video>
 </div>
 
 <div class="footer">
@@ -309,9 +311,6 @@ document.getElementById("card").classList.add("fail");
 }
 
 document.getElementById("analysisStatus").innerHTML="Biometric Analysis Complete";
-<video id="confettiVideo" width="100%" style="display:none; margin-top:15px;" muted>
-<source src="confetti.mp4" type="video/mp4">
-</video>
   
 }
 
@@ -346,13 +345,37 @@ ctx.stroke();
 }
 
 /* Challenge */
+let challengeType = 0;
+
 function drawChallenge(){
+
 ctx.clearRect(0,0,320,120);
 ctx.strokeStyle="#00ffd0";
 ctx.lineWidth=3;
 ctx.beginPath();
-ctx.moveTo(challengeLine.x1,challengeLine.y1);
-ctx.lineTo(challengeLine.x2,challengeLine.y2);
+
+challengeType = Math.floor(Math.random()*3);
+
+if(challengeType===0){
+// Straight Line
+ctx.moveTo(40,100);
+ctx.lineTo(280,20);
+}
+
+if(challengeType===1){
+// Arc
+ctx.arc(160,60,50,Math.PI*0.2,Math.PI*0.8);
+}
+
+if(challengeType===2){
+// Zigzag
+ctx.moveTo(40,80);
+ctx.lineTo(100,40);
+ctx.lineTo(160,90);
+ctx.lineTo(220,30);
+ctx.lineTo(280,80);
+}
+
 ctx.stroke();
 }
 
@@ -368,6 +391,7 @@ ctx.fillRect(x,y,3,3);
 function launchConfetti(){
 let video=document.getElementById("confettiVideo");
 video.style.display="block";
+video.currentTime = 0;
 video.play();
 }
   
