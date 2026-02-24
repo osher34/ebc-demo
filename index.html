@@ -176,7 +176,22 @@ let ch=document.getElementById("challenge");
 let ctx=ch.getContext("2d");
 
 /* START */
-function startTest(){
+async function startTest(){
+
+// REQUEST MOTION PERMISSION (iOS fix)
+if (typeof DeviceMotionEvent !== "undefined" &&
+    typeof DeviceMotionEvent.requestPermission === "function") {
+    try {
+        const permission = await DeviceMotionEvent.requestPermission();
+        if (permission !== "granted") {
+            alert("Motion permission is required");
+            return;
+        }
+    } catch (error) {
+        alert("Motion permission error");
+        return;
+    }
+}
 
 collecting=true;
 xArr=[];yArr=[];zArr=[];points=[];
@@ -196,6 +211,7 @@ setTimeout(()=>{
 collecting=false;
 analyze();
 },duration);
+
 }
 
 /* Progress */
