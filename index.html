@@ -309,7 +309,10 @@ document.getElementById("card").classList.add("fail");
 }
 
 document.getElementById("analysisStatus").innerHTML="Biometric Analysis Complete";
-
+<video id="confettiVideo" width="100%" style="display:none; margin-top:15px;" muted>
+<source src="confetti.mp4" type="video/mp4">
+</video>
+  
 }
 
 /* Distance */
@@ -362,7 +365,12 @@ points.push({x,y});
 ctx.fillStyle="white";
 ctx.fillRect(x,y,3,3);
 });
-
+function launchConfetti(){
+let video=document.getElementById("confettiVideo");
+video.style.display="block";
+video.play();
+}
+  
 </script>
 </body>
 </html>
