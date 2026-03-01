@@ -247,9 +247,7 @@ document.getElementById("xyz").innerHTML=
 /* ANALYZE */
 function analyze(){
 
-if(zArr.length<10){
-document.getElementById("analysisStatus").innerHTML="Low motion data – continuing analysis";
-}
+console.log("ANALYZE RUNNING", zArr.length);
 
 let active=0;
 for(let i=0;i<xArr.length;i++){
