@@ -3,7 +3,11 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EBC – Enhanced Biometric Confirmation</title>
-<script src="https://cdn.jsdelivr.net/npm/fft.js/dist/fft.min.js"></script>
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EBC – Enhanced Biometric Confirmation</title>
 
 <style>
 
@@ -17,7 +21,7 @@ overflow-x:hidden;
 position:relative;
 }
 
-/* Digital Grid */
+/* ===== Digital Grid ===== */
 body::before{
 content:"";
 position:fixed;
@@ -36,7 +40,7 @@ from{transform:translate(0,0);}
 to{transform:translate(-200px,-200px);}
 }
 
-/* Brain Background */
+/* ===== Brain Background ===== */
 body::after{
 content:"";
 position:fixed;
@@ -49,13 +53,32 @@ background-size:contain;
 opacity:0.18;
 pointer-events:none;
 z-index:-2;
+filter:none; 
+}
+
+/* Header */
+.header{
+padding:25px 10px 10px 10px;
+}
+
+.header h1{
+margin:0;
+font-size:22px;
+color:#00e0ff;
+text-shadow:0 0 15px rgba(0,255,255,0.5);
+}
+
+.header p{
+margin:6px 0 15px 0;
+font-size:14px;
+opacity:0.85;
 }
 
 /* Card */
 .card{
 width:95%;
 max-width:420px;
-margin:20px auto;
+margin:10px auto;
 padding:20px;
 background:rgba(0,0,0,0.35);
 border-radius:20px;
@@ -74,6 +97,7 @@ box-shadow:0 0 80px rgba(0,255,150,0.7);
 box-shadow:0 0 80px rgba(255,0,60,0.7);
 }
 
+/* Button */
 button{
 padding:14px 28px;
 border:none;
@@ -83,9 +107,14 @@ color:black;
 font-weight:bold;
 cursor:pointer;
 box-shadow:0 0 20px rgba(0,255,255,0.6);
+transition:0.3s;
 }
 
-/* Progress */
+button:hover{
+transform:scale(1.05);
+box-shadow:0 0 30px rgba(0,255,255,0.9);
+}
+
 .progress{
 height:6px;
 background:#1b2e3d;
@@ -100,21 +129,39 @@ width:0%;
 background:yellow;
 }
 
-/* Canvas */
 canvas{
 margin-top:12px;
-background:rgba(8,18,28,0.55);
+background:rgba(8,18,28,0.55); 
 border-radius:14px;
+box-shadow:inset 0 0 15px rgba(0,255,255,0.08);
 touch-action:none;
+backdrop-filter:blur(4px);
 }
 
-/* Text blocks */
-#xyz{margin-top:10px;font-size:14px;opacity:0.85;}
-#result{margin-top:18px;font-size:19px;font-weight:bold;}
-#badge{font-size:14px;margin-top:6px;color:#00e0ff;}
-#challengeScore{margin-top:10px;font-size:14px;}
-#tremorMeter{margin-top:6px;font-size:14px;}
-#analysisStatus{margin-top:8px;font-size:13px;opacity:0.8;}
+#xyz{
+margin-top:10px;
+font-size:14px;
+opacity:0.85;
+}
+
+#result{
+margin-top:18px;
+font-size:19px;
+font-weight:bold;
+letter-spacing:1px;
+}
+
+#badge{
+font-size:14px;
+margin-top:6px;
+color:#00e0ff;
+}
+
+#challengeScore{
+margin-top:10px;
+font-size:14px;
+opacity:0.95;
+}
 
 /* Footer */
 .footer{
@@ -128,12 +175,22 @@ border-radius:50%;
 background:#0a1f2f;
 padding:12px;
 box-shadow:0 0 40px rgba(0,255,255,0.6);
+transition:0.4s;
+}
+
+.footer img:hover{
+transform:scale(1.05);
+box-shadow:0 0 60px rgba(0,255,255,0.9);
 }
 
 </style>
 </head>
-
 <body>
+
+<div class="header">
+<h1>EBC | Enhanced Biometric Confirmation</h1>
+<p>Protecting Digital Trust in the Age of Synthetic Reality</p>
+</div>
 
 <div class="card" id="card">
 
@@ -153,11 +210,7 @@ box-shadow:0 0 40px rgba(0,255,255,0.6);
 <div id="result"></div>
 <div id="badge"></div>
 <div id="challengeScore"></div>
-<div id="tremorMeter"></div>
-<div id="analysisStatus"></div>
-<video id="confettiVideo" width="100%" style="display:none; margin-top:15px;" muted>
-<source src="confetti.mp4" type="video/mp4">
-</video>
+
 </div>
 
 <div class="footer">
@@ -172,49 +225,18 @@ let duration=5000;
 let points=[];
 let challengeLine={x1:40,y1:100,x2:280,y2:20};
 
-let ch=document.getElementById("challenge");
-let ctx=ch.getContext("2d");
-
-/* START */
-async function startTest(){
-
-// REQUEST MOTION PERMISSION (iOS fix)
-if (typeof DeviceMotionEvent !== "undefined" &&
-    typeof DeviceMotionEvent.requestPermission === "function") {
-    try {
-        const permission = await DeviceMotionEvent.requestPermission();
-        if (permission !== "granted") {
-            alert("Motion permission is required");
-            return;
-        }
-    } catch (error) {
-        alert("Motion permission error");
-        return;
-    }
-}
-
+function startTest(){
 collecting=true;
 xArr=[];yArr=[];zArr=[];points=[];
-
-document.getElementById("bar").style.width="0%";
 document.getElementById("result").innerHTML="";
 document.getElementById("badge").innerHTML="";
 document.getElementById("challengeScore").innerHTML="";
-document.getElementById("tremorMeter").innerHTML="";
-document.getElementById("analysisStatus").innerHTML="";
 document.getElementById("card").classList.remove("success","fail");
-
 animateBar();
 drawChallenge();
-
-setTimeout(()=>{
-collecting=false;
-analyze();
-},duration);
-
+setTimeout(()=>{collecting=false;analyze();},duration);
 }
 
-/* Progress */
 function animateBar(){
 let start=Date.now();
 let interval=setInterval(()=>{
@@ -224,10 +246,8 @@ if(p>=100) clearInterval(interval);
 },50);
 }
 
-/* Motion */
 window.addEventListener("devicemotion",function(e){
-
-if(!collecting || !e.acceleration) return;
+if(!collecting||!e.acceleration)return;
 
 let x=e.acceleration.x||0;
 let y=e.acceleration.y||0;
@@ -241,126 +261,48 @@ drawGraphs();
 
 document.getElementById("xyz").innerHTML=
 "X:"+x.toFixed(2)+" | Y:"+y.toFixed(2)+" | Z:"+z.toFixed(2);
-
 });
 
-/* ANALYZE */
 function analyze(){
 
-console.log("ANALYZE RUNNING", zArr.length);
+let activeSamples=0;
 
-let active=0;
 for(let i=0;i<xArr.length;i++){
-if(Math.abs(xArr[i])>0.11||Math.abs(yArr[i])>0.11||Math.abs(zArr[i])>0.11){
-active++;
+if(
+Math.abs(xArr[i])>0.11 ||
+Math.abs(yArr[i])>0.11 ||
+Math.abs(zArr[i])>0.11
+){
+activeSamples++;
 }
 }
 
-let tremorDetected=(active/xArr.length)>0.15;
-
-let dominantFreq=0;
-let samplingRate=xArr.length/5;
-
-let fftSize=1;
-while(fftSize<zArr.length) fftSize*=2;
-
-let padded=new Array(fftSize).fill(0);
-for(let i=0;i<zArr.length;i++) padded[i]=zArr[i];
-
-let fft=new FFT(fftSize);
-let input=fft.createComplexArray();
-let output=fft.createComplexArray();
-
-for(let i=0;i<fftSize;i++){
-input[2*i]=padded[i];
-input[2*i+1]=0;
-}
-
-fft.transform(output,input);
-
-let maxMag=0;
-for(let i=1;i<fftSize/2;i++){
-let real=output[2*i];
-let imag=output[2*i+1];
-let mag=Math.sqrt(real*real+imag*imag);
-if(mag>maxMag){
-maxMag=mag;
-dominantFreq=i*samplingRate/fftSize;
-}
-}
-
-let tremorBand=(dominantFreq>=6 && dominantFreq<=14);
+let ratio = activeSamples / xArr.length;
+let tremorDetected = ratio > 0.15;
 
 let totalDist=0;
-
 for(let p of points){
-
-if(challengeType===0){
-// Straight line
-totalDist+=pointToLineDistance(p,{x1:40,y1:100,x2:280,y2:20});
+totalDist+=pointToLineDistance(p,challengeLine);
 }
-
-if(challengeType===1){
-// Arc distance
-let centerX=160;
-let centerY=60;
-let radius=50;
-let dx=p.x-centerX;
-let dy=p.y-centerY;
-let distFromCenter=Math.sqrt(dx*dx+dy*dy);
-totalDist+=Math.abs(distFromCenter-radius);
-}
-
-if(challengeType===2){
-// Zigzag (segment approximation)
-let segments=[
-{x1:40,y1:80,x2:100,y2:40},
-{x1:100,y1:40,x2:160,y2:90},
-{x1:160,y1:90,x2:220,y2:30},
-{x1:220,y1:30,x2:280,y2:80}
-];
-
-let minDist=999;
-for(let s of segments){
-let d=pointToLineDistance(p,s);
-if(d<minDist) minDist=d;
-}
-totalDist+=minDist;
-}
-
-}
-
 let avgDist=points.length?totalDist/points.length:999;
-let challengePercent=Math.max(0,100-avgDist*4);
+let challengePercent = Math.max(0, 100 - avgDist*5);
+challengePercent = Math.min(100, challengePercent);
+
 document.getElementById("challengeScore").innerHTML=
 "Challenge Accuracy: "+challengePercent.toFixed(0)+"%";
 
-document.getElementById("tremorMeter").innerHTML=
-"Dominant Tremor Frequency: "+dominantFreq.toFixed(2)+" Hz";
-
-document.getElementById("analysisStatus").innerHTML=
-"Analyzing Biometric Signature...";
-
-// FINAL DECISION
-
-let isHuman = tremorDetected && tremorBand;
-
-if(isHuman){
+if(tremorDetected){
 document.getElementById("result").innerHTML="LIVE HUMAN DETECTED";
 document.getElementById("badge").innerHTML="Physiological Tremor Confirmed";
 document.getElementById("card").classList.add("success");
-launchConfetti();
 }else{
 document.getElementById("result").innerHTML="NOT HUMAN";
-document.getElementById("badge").innerHTML="No Valid Tremor Signature";
+document.getElementById("badge").innerHTML="No Detectable Tremor";
 document.getElementById("card").classList.add("fail");
 }
 
-document.getElementById("analysisStatus").innerHTML="Biometric Analysis Complete";
-  
 }
 
-/* Distance */
 function pointToLineDistance(p,line){
 let A=line.y2-line.y1;
 let B=line.x1-line.x2;
@@ -368,7 +310,6 @@ let C=line.x2*line.y1-line.x1*line.y2;
 return Math.abs(A*p.x+B*p.y+C)/Math.sqrt(A*A+B*B);
 }
 
-/* Graphs */
 function drawGraphs(){
 drawLine("graphX",xArr,"#ff4d4d");
 drawLine("graphY",yArr,"#4dff88");
@@ -390,38 +331,16 @@ else ctx.lineTo(x,y);
 ctx.stroke();
 }
 
-/* Challenge */
-let challengeType = 0;
+let ch=document.getElementById("challenge");
+let ctx=ch.getContext("2d");
 
 function drawChallenge(){
-
 ctx.clearRect(0,0,320,120);
 ctx.strokeStyle="#00ffd0";
 ctx.lineWidth=3;
 ctx.beginPath();
-
-challengeType = Math.floor(Math.random()*3);
-
-if(challengeType===0){
-// Straight Line
-ctx.moveTo(40,100);
-ctx.lineTo(280,20);
-}
-
-if(challengeType===1){
-// Arc
-ctx.arc(160,60,50,Math.PI*0.2,Math.PI*0.8);
-}
-
-if(challengeType===2){
-// Zigzag
-ctx.moveTo(40,80);
-ctx.lineTo(100,40);
-ctx.lineTo(160,90);
-ctx.lineTo(220,30);
-ctx.lineTo(280,80);
-}
-
+ctx.moveTo(challengeLine.x1,challengeLine.y1);
+ctx.lineTo(challengeLine.x2,challengeLine.y2);
 ctx.stroke();
 }
 
@@ -434,13 +353,8 @@ points.push({x,y});
 ctx.fillStyle="white";
 ctx.fillRect(x,y,3,3);
 });
-function launchConfetti(){
-let video=document.getElementById("confettiVideo");
-video.style.display="block";
-video.currentTime = 0;
-video.play();
-}
-  
+
 </script>
+
 </body>
 </html>
